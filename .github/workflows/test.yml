@@ -11,6 +11,11 @@ jobs:
     - uses: actions/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby }}
+    - uses: actions/cache@v1
+      id: cache
+      with:
+        path: vendor/bundler
+        key: ${{ hashFiles('Gemfile.lock') }}-${{ matrix.ruby }}
     - run: |
         gem install bundler
         bundle install --path=vendor/bundler
