@@ -17,6 +17,7 @@ jobs:
         path: vendor/bundler
         key: ${{ hashFiles('Gemfile.lock') }}
     - run: |
+        gem install bundler
         bundle install --path=vendor/bundler
         bundle exec rspec
         bundle exec rubocop
