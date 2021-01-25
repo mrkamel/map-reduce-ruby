@@ -1,5 +1,9 @@
 # MapReduce
 
+**The easiest way to write distributed, larger than memory map-reduce jobs**
+
+[![Build Status](https://secure.travis-ci.org/mrkamel/map_reduce.svg?branch=master)](http://travis-ci.org/mrkamel/map_reduce)
+
 The MapReduce gem provides the easiest way to write custom, distributed, larger
 than memory map-reduce jobs by using your local disk and some arbitrary storage
 layer like s3. You can specify how much memory you are willing to offer and
