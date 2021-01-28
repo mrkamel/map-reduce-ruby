@@ -50,7 +50,7 @@ Next, we need some worker code to run the mapping part:
 ```ruby
 class WordCountMapper
   def perform(job_id, mapper_id, url)
-    mapper = MapReduce::Mapper.new(WordCounter.new, num_partitions: 16, memory_limit: 100.megabytes)
+    mapper = MapReduce::Mapper.new(WordCounter.new, partitioner: MapReduce::HashPartitioner.new(16), memory_limit: 100.megabytes)
     mapper.map(url)
 
     mapper.shuffle do |partition, tempfile|
@@ -61,7 +61,9 @@ class WordCountMapper
 end
 ```
 
-Finally, we need some worker code to run the reduce part:
+Please note that `MapReduce::HashPartitioner.new(16)` states that we want split
+the dataset into 16 partitions (i.e. 0, 1, ... 15). Finally, we need some
+worker code to run the reduce part:
 
 ```ruby
 class WordCountReducer
@@ -100,10 +102,10 @@ And to run your reducers:
 end
 ```
 
-How to run automate running the mappers and reducers in sequence, depends on
-your background job system. The most simple approach is e.g. to track your
-mapper state in redis and have a job to start your reducers which waits up
-until your mappers are finished.
+How to automate running the mappers and reducers in sequence, depends on your
+background job system. The most simple approach is e.g. to track your mapper
+state in redis and have a job to start your reducers which waits up until your
+mappers are finished.
 
 That's it.
 
@@ -128,7 +130,7 @@ them into memory and is called `k-way-merge`. With every `pop` operation, your
 `reduce` implementation is continously called up until the key changes between
 two calls to `pop`. When the key changes, the key is known to be fully reduced,
 such that the key is hashed modulo the number of partitions and gets written to
-the correct partition tempfile.
+the correct partition tempfile (when `MapReduce::HashPartitioner` is used).
 
 The resulting partition tempfiles need to be stored in some global storage
 system like s3, such that your workers can mappers can upload them and the
@@ -140,6 +142,32 @@ contents to that tempfile. `MapReduce::Reducer#reduce` finally again builds up
 a priority queue and performs `k-way-merge`, feeds the key-value pairs into
 your reduce implementation up until a key change between `pop` operations occur
 and yields the fully reduced key-value pair.
+
+## Partitioners
+
+Partitioners are used to split the dataset into a specified amount of
+partitions, which allows to parallelize the work to be done by reducers.
+MapReduce comes with a `HashPartitioner`, which takes the number of partitions
+as an argument and derives the partition number from the key as follows:
+
+```ruby
+class HashPartitioner
+  def initialize(num_partitions)
+    @num_partitions = num_partitions
+  end
+
+  def call(key)
+    Digest::SHA1.hexdigest(JSON.generate(key))[0..4].to_i(16) % @num_partitions
+  end
+end
+```
+
+Thus, writing your own custom partitioner is really easy and, as it follows the
+interface of callables, could even be expressed as a simple one-liner:
+
+```ruby
+MyPartitioner = proc { |key| Digest::SHA1.hexdigest(JSON.generate(key))[0..4].to_i(16) % 8 }
+```
 
 ## Development
 
