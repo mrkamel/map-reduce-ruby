@@ -2,12 +2,15 @@ module MapReduce
   class Mapper
     include Mergeable
     include Reduceable
+    include MonitorMixin
 
     attr_reader :partitions
 
-    def initialize(implementation, num_partitions: 32, memory_limit: 100 * 1024 * 1024)
+    def initialize(implementation, partitioner: HashPartitioner.new(32), memory_limit: 100 * 1024 * 1024)
+      super()
+
       @implementation = implementation
-      @num_partitions = num_partitions
+      @partitioner = partitioner
       @memory_limit = memory_limit.to_i
 
       @buffer_size = 0
@@ -17,11 +20,13 @@ module MapReduce
 
     def map(key)
       @implementation.map(key) do |new_key, new_value|
-        @buffer.push([new_key, new_value])
+        synchronize do
+          @buffer.push([new_key, new_value])
 
-        @buffer_size += new_key.inspect.bytesize + new_value.inspect.bytesize
+          @buffer_size += new_key.inspect.bytesize + new_value.inspect.bytesize
 
-        write_chunk if @buffer_size >= @memory_limit
+          write_chunk if @buffer_size >= @memory_limit
+        end
       end
     end
 
@@ -33,7 +38,7 @@ module MapReduce
       partitions = {}
 
       reduce_chunk(k_way_merge(@chunks), @implementation).each do |pair|
-        partition = Digest::SHA1.hexdigest(pair[0].inspect)[0..4].to_i(16) % @num_partitions
+        partition = @partitioner.call(pair[0])
 
         (partitions[partition] ||= Tempfile.new).puts(JSON.generate(pair))
       end
