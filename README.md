@@ -97,7 +97,7 @@ end
 And to run your reducers:
 
 ```ruby
-(0..16).each do |partition|
+(0..15).each do |partition|
   WordCountReducer.perform_async(job_id, partition)
 end
 ```
