@@ -2,8 +2,11 @@ module MapReduce
   class Reducer
     include Mergeable
     include Reduceable
+    include MonitorMixin
 
     def initialize(implementation)
+      super()
+
       @implementation = implementation
 
       @tempfiles ||= []
@@ -12,7 +15,9 @@ module MapReduce
     def add_chunk
       tempfile = Tempfile.new
 
-      @tempfiles.push(tempfile)
+      synchronize do
+        @tempfiles.push(tempfile)
+      end
 
       tempfile
     end
