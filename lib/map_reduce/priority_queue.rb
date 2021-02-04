@@ -18,7 +18,7 @@ module MapReduce
     # comparable object.
     #
     # @param object The object to add to the priority queue.
-    # @param key The key to use for sorting
+    # @param key The key to use for sorting.
     #
     # @example
     #   priority_queue = MapReduce::PriorityQueue.new

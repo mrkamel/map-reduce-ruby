@@ -48,8 +48,8 @@ class WordCounter
 end
 ```
 
-The `#map` method takes some key, e.g. an url, and yields an arbitrary amount
-of key-value pairs. The `#reduce` method takes the key and two values and
+The `#map` method takes some key, e.g. a url, and yields an arbitrary amount of
+key-value pairs. The `#reduce` method takes the key as well as two values and
 should return a single reduced value.
 
 Next, we need some worker code to run the mapping part:

@@ -9,7 +9,7 @@ module MapReduce
     # Initializes a new reducer.
     #
     # @param implementation Your map-reduce implementation, i.e. an object
-    #   which response to map and reduce.
+    #   which responds to #map and #reduce.
     #
     # @example
     #   MapReduce::Reducer.new(MyImplementation.new)
@@ -24,7 +24,7 @@ module MapReduce
 
     # Adds a chunk from the mapper-phase to the reducer by registering and
     # returning a tempfile, such that you can download a chunk e.g. from s3
-    # and write it to this tempfile.
+    # and write the content to this tempfile.
     #
     # @example
     #   tempfile = reducer.add_chunk

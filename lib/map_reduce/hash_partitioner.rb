@@ -7,7 +7,7 @@ module MapReduce
     #
     # @param num_partitions [Fixnum] The desired number of partitions.
     #   Typically 8, 16, 32, 64, etc. but can be everything according to your
-    #   your needs.
+    #   needs.
     #
     # @example
     #   MapReduce::HashPartitioner.new(16)
@@ -19,7 +19,7 @@ module MapReduce
     # Calculates the partition for the specified key.
     #
     # @param key The key to calculate the partition for. Can be everything
-    #   that can be serialized to json.
+    #   that can be serialized as json.
     #
     # @example
     #   partitioner.call("some key")

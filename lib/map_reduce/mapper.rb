@@ -11,11 +11,11 @@ module MapReduce
     # Initializes a new mapper.
     #
     # @param implementation Your map-reduce implementation, i.e. an object
-    #   which response to map and reduce
-    # @param partitioner [#call] A partitioner, i.e. an object which response
-    #   to #call and calculates a partition for the passed key
+    #   which responds to #map and #reduce.
+    # @param partitioner [#call] A partitioner, i.e. an object which responds
+    #   to #call and calculates a partition for the passed key.
     # @param memory_limit [#to_i] The memory limit, i.e. the buffer size in
-    #   bytes
+    #   bytes.
     #
     # @example
     #  MapReduce::Mapper.new(MyImplementation.new, partitioner: HashPartitioner.new(16), memory_limit: 100.megabytes)
@@ -32,11 +32,11 @@ module MapReduce
       @chunks = []
     end
 
-    # Passes the passed key to your map-reduce implementation and adds yielded
-    # key-value pair to a buffer. When the memory limit is reached, the chunk
-    # is sorted and written to a tempfile.
+    # Passes the received key to your map-reduce implementation and adds
+    # yielded key-value pair to a buffer. When the memory limit is reached, the
+    # chunk is sorted and written to a tempfile.
     #
-    # @param key The key to pass to the map-reduce implementation
+    # @param key The key to pass to the map-reduce implementation.
     #
     # @example
     #   mapper.map("some_key")
