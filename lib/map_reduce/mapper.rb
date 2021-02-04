@@ -47,7 +47,7 @@ module MapReduce
         synchronize do
           @buffer.push([new_key, new_value])
 
-          @buffer_size += new_key.inspect.bytesize + new_value.inspect.bytesize
+          @buffer_size += JSON.generate([new_key, new_value]).bytesize
 
           write_chunk if @buffer_size >= @memory_limit
         end

@@ -26,7 +26,7 @@ RSpec.describe MapReduce::Mapper do
         .and_yield("key4", "d" * 10)
         .and_yield("key5", "e" * 10)
 
-      mapper = described_class.new(implementation, memory_limit: 20)
+      mapper = described_class.new(implementation, memory_limit: 25)
       mapper.map("key")
 
       expect(tempfile1.tap(&:rewind).read).to eq("[\"key1\",\"aaaaaaaaaa\"]\n[\"key2\",\"bbbbbbbbbb\"]\n")
@@ -50,7 +50,7 @@ RSpec.describe MapReduce::Mapper do
         count1 + count2
       end
 
-      mapper = described_class.new(implementation, memory_limit: 25)
+      mapper = described_class.new(implementation, memory_limit: 35)
       mapper.map("key")
 
       expect(tempfile.tap(&:rewind).read).to eq("[\"key1\",2]\n[\"key2\",1]\n[\"key3\",1]\n")
@@ -68,7 +68,7 @@ RSpec.describe MapReduce::Mapper do
         .and_yield("key4", "d" * 10)
         .and_yield("key5", "e" * 10)
 
-      mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(4), memory_limit: 20)
+      mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(4), memory_limit: 50)
       mapper.map("key")
 
       result = mapper.shuffle.map { |partition, tempfile| [partition, tempfile.read] }
@@ -97,7 +97,7 @@ RSpec.describe MapReduce::Mapper do
         count1 + count2
       end
 
-      mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(8), memory_limit: 10)
+      mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(8), memory_limit: 20)
       mapper.map("key")
 
       result = mapper.shuffle.map { |partition, tempfile| [partition, tempfile.read] }
