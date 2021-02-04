@@ -1,10 +1,24 @@
 module MapReduce
+  # The MapReduce::Mapper class runs the mapping part of your map-reduce job.
+
   class Mapper
     include Mergeable
     include Reduceable
     include MonitorMixin
 
     attr_reader :partitions
+
+    # Initializes a new mapper.
+    #
+    # @param implementation Your map-reduce implementation, i.e. an object
+    #   which response to map and reduce
+    # @param partitioner [#call] A partitioner, i.e. an object which response
+    #   to #call and calculates a partition for the passed key
+    # @param memory_limit [#to_i] The memory limit, i.e. the buffer size in
+    #   bytes
+    #
+    # @example
+    #  MapReduce::Mapper.new(MyImplementation.new, partitioner: HashPartitioner.new(16), memory_limit: 100.megabytes)
 
     def initialize(implementation, partitioner: HashPartitioner.new(32), memory_limit: 100 * 1024 * 1024)
       super()
@@ -18,6 +32,16 @@ module MapReduce
       @chunks = []
     end
 
+    # Passes the passed key to your map-reduce implementation and adds yielded
+    # key-value pair to a buffer. When the memory limit is reached, the chunk
+    # is sorted and written to a tempfile.
+    #
+    # @param key The key to pass to the map-reduce implementation
+    #
+    # @example
+    #   mapper.map("some_key")
+    #   mapper.map("other_key")
+
     def map(key)
       @implementation.map(key) do |new_key, new_value|
         synchronize do
@@ -29,6 +53,16 @@ module MapReduce
         end
       end
     end
+
+    # Performs a k-way-merge of the sorted chunks written to tempfiles while
+    # already reducing the result using your map-reduce implementation and
+    # splitting the dataset into partitions. Finally yields each partition with
+    # the tempfile containing the data of the partition.
+    #
+    # @example
+    #   mapper.shuffle do |partition, tempfile|
+    #     # store data e.g. on s3
+    #   end
 
     def shuffle(&block)
       return enum_for(:shuffle) unless block_given?
