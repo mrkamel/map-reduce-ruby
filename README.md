@@ -7,7 +7,8 @@ than memory map-reduce jobs by using your local disk and some arbitrary storage
 layer like s3. You can specify how much memory you are willing to offer and
 MapReduce will use its buffers accordingly. Finally, you can use your already
 existing background job system like `sidekiq` or one of its various
-alternatives.
+alternatives. Finally, your keys and values can be everything that can be
+serialized as json.
 
 ## Installation
 
@@ -28,8 +29,10 @@ Or install it yourself as:
 ## Usage
 
 Any map-reduce job consists of an implementation of your `map` function, your
-`reduce` function and worker code. So let's start with an implementation for
-a word count map-reduce task which fetches txt documents from the web.
+`reduce` function and worker code. So let's start with an implementation for a
+word count map-reduce task which fetches txt documents from the web. Please
+note that your keys and values can be everything that can be serialized as
+json, but nothing else.
 
 ```ruby
 class WordCounter
@@ -44,6 +47,10 @@ class WordCounter
   end
 end
 ```
+
+The `#map` method takes some key, e.g. a url, and yields an arbitrary amount of
+key-value pairs. The `#reduce` method takes the key as well as two values and
+should return a single reduced value.
 
 Next, we need some worker code to run the mapping part:
 
@@ -133,15 +140,15 @@ such that the key is hashed modulo the number of partitions and gets written to
 the correct partition tempfile (when `MapReduce::HashPartitioner` is used).
 
 The resulting partition tempfiles need to be stored in some global storage
-system like s3, such that your workers can mappers can upload them and the
-reducers can download them.
+system like s3, such that your mapper workers can upload them and the reducer
+workers can download them.
 
 `MapReduce::Reducer#add_chunk` adds and registers a new tempfile such that your
 reducer can download a mapper file for the particular partition and write its
 contents to that tempfile. `MapReduce::Reducer#reduce` finally again builds up
 a priority queue and performs `k-way-merge`, feeds the key-value pairs into
-your reduce implementation up until a key change between `pop` operations occur
-and yields the fully reduced key-value pair.
+your reduce implementation up until a key change between `pop` operations
+occurs and yields the fully reduced key-value pair.
 
 ## Partitioners
 
