@@ -20,6 +20,7 @@ module MapReduce
     #
     # @param key The key to calculate the partition for. Can be everything
     #   that can be serialized as json.
+    # @returns [Integer] The partition number.
     #
     # @example
     #   partitioner.call("some key")
