@@ -32,6 +32,8 @@ module MapReduce
 
     # Pops the min item from the queue.
     #
+    # @returns The popped object.
+    #
     # @example
     #   priority_queue = MapReduce::PriorityQueue.new
     #   priority_queue.push("object1", "key1")
