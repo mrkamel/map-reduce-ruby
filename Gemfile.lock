@@ -16,7 +16,6 @@ GEM
     parser (3.0.0.0)
       ast (~> 2.4.1)
     rainbow (3.0.0)
-    rake (13.0.3)
     regexp_parser (2.0.3)
     rexml (3.2.4)
     rspec (3.10.0)
@@ -47,13 +46,13 @@ GEM
     unicode-display_width (1.7.0)
 
 PLATFORMS
+  ruby
   x86_64-linux
 
 DEPENDENCIES
   map_reduce!
-  rake (~> 13.0)
-  rspec (~> 3.0)
-  rubocop (~> 0.80)
+  rspec
+  rubocop
 
 BUNDLED WITH
    2.2.2
