@@ -20,7 +20,10 @@ module MapReduce
       last_item = chunk.inject do |prev_item, cur_item|
         prev_key = prev_item[0]
 
-        if JSON.generate(prev_key) == JSON.generate(cur_item[0])
+        # Here we can compare without serializing the keys to json first,
+        # because we reduce a chunk which includes a deserialization step.
+
+        if prev_key == cur_item[0]
           [prev_key, implementation.reduce(prev_key, prev_item[1], cur_item[1])]
         else
           yield(prev_item)
