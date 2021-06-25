@@ -29,7 +29,7 @@ module MapReduce
 
         key, value = JSON.parse(line)
 
-        queue.push([key, value, index], key)
+        queue.push([key, value, index], JSON.generate(key))
       end
 
       loop do
@@ -45,7 +45,7 @@ module MapReduce
 
         key, value = JSON.parse(line)
 
-        queue.push([key, value, index], key)
+        queue.push([key, value, index], JSON.generate(key))
       end
 
       files.each(&:rewind)
