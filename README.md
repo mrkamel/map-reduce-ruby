@@ -79,12 +79,12 @@ class WordCountReducer
 
     # fetch all chunks of the partitions e.g. from s3:
     bucket.list(prefix: "map_reduce/jobs/#{job_id}/partitions/#{partition}/").each do |object|
-      tempfile = reducer.add_chunk
+      temp_path = reducer.add_chunk
 
-      object.download_file(tempfile.path)
+      object.download_file(temp_path)
     end
 
-    reducer.reduce do |word, count|
+    reducer.reduce(chunk_limit: 32) do |word, count|
       # each word with its final count
     end
   end
@@ -143,12 +143,20 @@ The resulting partition tempfiles need to be stored in some global storage
 system like s3, such that your mapper workers can upload them and the reducer
 workers can download them.
 
-`MapReduce::Reducer#add_chunk` adds and registers a new tempfile such that your
-reducer can download a mapper file for the particular partition and write its
-contents to that tempfile. `MapReduce::Reducer#reduce` finally again builds up
-a priority queue and performs `k-way-merge`, feeds the key-value pairs into
+`MapReduce::Reducer#add_chunk` adds and registers a new tempfile path such that
+your reducer can download a mapper file for the particular partition and write
+its contents to that tempfile. `MapReduce::Reducer#reduce` finally again builds
+up a priority queue and performs `k-way-merge`, feeds the key-value pairs into
 your reduce implementation up until a key change between `pop` operations
-occurs and yields the fully reduced key-value pair.
+occurs and yields the fully reduced key-value pair. At the end `#reduce`
+removes all the tempfiles. You can pass a `chunk_limit` to
+`MapReduce::Reducer#reduce`, which is most useful when you run on a system with
+a limited number of open file descriptors allowed. The `chunk_limit` ensures
+that only the specified amount of chunks are processed in a single run. A run
+basically means: it takes up to `chunk_limit` chunks, reduces them and pushes
+the result as a new chunk to the list of chunks. Thus, if your number of file
+descriptions is unlimited, you want to set it to a high number to avoid the
+overhead of multiple runs.
 
 ## Partitioners
 

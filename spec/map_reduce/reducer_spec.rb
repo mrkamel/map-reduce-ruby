@@ -1,7 +1,7 @@
 RSpec.describe MapReduce::Reducer do
   describe "#add_chunk" do
     it "creates and returns a tempfile" do
-      allow(Tempfile).to receive(:new).and_return("tempfile")
+      allow(MapReduce::TempPath).to receive(:new).and_return("tempfile")
 
       reducer = described_class.new(nil)
 
@@ -19,15 +19,17 @@ RSpec.describe MapReduce::Reducer do
 
       reducer = described_class.new(implementation)
 
-      chunk1 = reducer.add_chunk
-      chunk1.puts(JSON.generate([{ "key" => "key1" }, { "value" => 1 }]))
-      chunk1.puts(JSON.generate([{ "key" => "key2" }, { "value" => 1 }]))
+      File.open(reducer.add_chunk.path, "w") do |file|
+        file.puts(JSON.generate([{ "key" => "key1" }, { "value" => 1 }]))
+        file.puts(JSON.generate([{ "key" => "key2" }, { "value" => 1 }]))
+      end
 
-      chunk2 = reducer.add_chunk
-      chunk2.puts(JSON.generate([{ "key" => "key3" }, { "value" => 1 }]))
-      chunk2.puts(JSON.generate([{ "key" => "key4" }, { "value" => 1 }]))
+      File.open(reducer.add_chunk.path, "w") do |file|
+        file.puts(JSON.generate([{ "key" => "key3" }, { "value" => 1 }]))
+        file.puts(JSON.generate([{ "key" => "key4" }, { "value" => 1 }]))
+      end
 
-      expect(reducer.reduce.to_a).to eq(
+      expect(reducer.reduce(chunk_limit: 32).to_a).to eq(
         [
           [{ "key" => "key1" }, { "value" => 1 }],
           [{ "key" => "key2" }, { "value" => 1 }],
@@ -37,7 +39,7 @@ RSpec.describe MapReduce::Reducer do
       )
     end
 
-    it "reduces the sorted chunks" do
+    it "reduces the sorted chunks and deletes chunk as well as intermediary files" do
       implementation = Object.new
 
       allow(implementation).to receive(:reduce) do |_, count1, count2|
@@ -46,27 +48,40 @@ RSpec.describe MapReduce::Reducer do
 
       reducer = described_class.new(implementation)
 
-      chunk1 = reducer.add_chunk
-      chunk1.puts(JSON.generate([{ key: "key1" }, { value: 1 }]))
-      chunk1.puts(JSON.generate([{ key: "key2" }, { value: 1 }]))
-      chunk1.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
+      File.open(reducer.add_chunk.path, "w") do |file|
+        file.puts(JSON.generate([{ key: "key1" }, { value: 1 }]))
+        file.puts(JSON.generate([{ key: "key2" }, { value: 1 }]))
+        file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
+      end
 
-      chunk2 = reducer.add_chunk
-      chunk2.puts(JSON.generate([{ key: "key2" }, { value: 1 }]))
-      chunk2.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
+      File.open(reducer.add_chunk.path, "w") do |file|
+        file.puts(JSON.generate([{ key: "key2" }, { value: 1 }]))
+        file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
+      end
 
-      chunk3 = reducer.add_chunk
-      chunk3.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
-      chunk3.puts(JSON.generate([{ key: "key4" }, { value: 1 }]))
+      File.open(reducer.add_chunk.path, "w") do |file|
+        file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
+        file.puts(JSON.generate([{ key: "key4" }, { value: 1 }]))
+      end
 
-      expect(reducer.reduce.to_a).to eq(
-        [
-          [{ "key" => "key1" }, { "value" => 1 }],
-          [{ "key" => "key2" }, { "value" => 2 }],
-          [{ "key" => "key3" }, { "value" => 3 }],
-          [{ "key" => "key4" }, { "value" => 1 }]
-        ]
-      )
+      expect do
+        expect(reducer.reduce(chunk_limit: 2).to_a).to eq(
+          [
+            [{ "key" => "key1" }, { "value" => 1 }],
+            [{ "key" => "key2" }, { "value" => 2 }],
+            [{ "key" => "key3" }, { "value" => 3 }],
+            [{ "key" => "key4" }, { "value" => 1 }]
+          ]
+        )
+      end.to change { Dir["/tmp/**/*"].size }.by(-3)
+    end
+
+    it "does not yield when there is nothing to reduce" do
+      expect(described_class.new(Object.new).reduce(chunk_limit: 32).to_a).to eq([])
+    end
+
+    it "raises a InvalidChunkLimit error when chunk_limit is less than 2" do
+      expect { described_class.new(Object.new).reduce(chunk_limit: 1).to_a }.to raise_error(described_class::InvalidChunkLimit)
     end
   end
 end
