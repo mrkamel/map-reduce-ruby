@@ -154,9 +154,9 @@ removes all the tempfiles. You can pass a `chunk_limit` to
 a limited number of open file descriptors allowed. The `chunk_limit` ensures
 that only the specified amount of chunks are processed in a single run. A run
 basically means: it takes up to `chunk_limit` chunks, reduces them and pushes
-the result as a new chunk to the list of chunks. Thus, if your number of file
-descriptions is unlimited, you want to set it to a high number to avoid the
-overhead of multiple runs.
+the result as a new chunk to the list of chunks to process. Thus, if your
+number of file descriptions is unlimited, you want to set it to a high number
+to avoid the overhead of multiple runs.
 
 ## Partitioners
 
