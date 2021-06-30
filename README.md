@@ -79,9 +79,9 @@ class WordCountReducer
 
     # fetch all chunks of the partitions e.g. from s3:
     bucket.list(prefix: "map_reduce/jobs/#{job_id}/partitions/#{partition}/").each do |object|
-      temp_path = reducer.add_chunk
+      chunk_path = reducer.add_chunk # returns a path to a tempfile
 
-      object.download_file(temp_path.path)
+      object.download_file(temp_path)
     end
 
     reducer.reduce(chunk_limit: 32) do |word, count|
@@ -91,10 +91,9 @@ class WordCountReducer
 end
 ```
 
-Please note that `MapReduce::Reducer#add_chunk` does not return a `Tempfile`,
-but a `MapReduce::TempPath` to limit the number of open file descriptors. Use
-`MapReduce::TempPath#path` as the reference to that file and open it only when
-you need to.
+Please note that `MapReduce::Reducer#add_chunk` returns a path to a tempfile,
+not `Tempfile` object. This allows to limit the number of open file
+descriptors.
 
 To run your mappers, you can do:
 
