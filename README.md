@@ -92,7 +92,7 @@ end
 ```
 
 Please note that `MapReduce::Reducer#add_chunk` returns a path to a tempfile,
-not `Tempfile` object. This allows to limit the number of open file
+not a `Tempfile` object. This allows to limit the number of open file
 descriptors.
 
 To run your mappers, you can do:
