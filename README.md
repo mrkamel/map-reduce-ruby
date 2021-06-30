@@ -81,7 +81,7 @@ class WordCountReducer
     bucket.list(prefix: "map_reduce/jobs/#{job_id}/partitions/#{partition}/").each do |object|
       temp_path = reducer.add_chunk
 
-      object.download_file(temp_path)
+      object.download_file(temp_path.path)
     end
 
     reducer.reduce(chunk_limit: 32) do |word, count|
@@ -90,6 +90,11 @@ class WordCountReducer
   end
 end
 ```
+
+Please note that `MapReduce::Reducer#add_chunk` does not return a `Tempfile`,
+but a `MapReduce::TempPath` to limit the number of open file descriptors. Use
+`MapReduce::TempPath#path` as the reference to that file and open it only when
+you need to.
 
 To run your mappers, you can do:
 
@@ -145,11 +150,11 @@ workers can download them.
 
 `MapReduce::Reducer#add_chunk` adds and registers a new tempfile path such that
 your reducer can download a mapper file for the particular partition and write
-its contents to that tempfile. `MapReduce::Reducer#reduce` finally again builds
-up a priority queue and performs `k-way-merge`, feeds the key-value pairs into
-your reduce implementation up until a key change between `pop` operations
-occurs and yields the fully reduced key-value pair. At the end `#reduce`
-removes all the tempfiles. You can pass a `chunk_limit` to
+its contents to that tempfile path. `MapReduce::Reducer#reduce` finally again
+builds up a priority queue and performs `k-way-merge`, feeds the key-value
+pairs into your reduce implementation up until a key change between `pop`
+operations occurs and yields the fully reduced key-value pair. At the end
+`#reduce` removes all the tempfiles. You can pass a `chunk_limit` to
 `MapReduce::Reducer#reduce`, which is most useful when you run on a system with
 a limited number of open file descriptors allowed. The `chunk_limit` ensures
 that only the specified amount of chunks are processed in a single run. A run

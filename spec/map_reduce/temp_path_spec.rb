@@ -1,9 +1,9 @@
 RSpec.describe MapReduce::TempPath do
   describe "#path" do
     it "uses Dir::Tmpname to generate a temporary path" do
-      allow(Dir::Tmpname).to receive(:create).and_yield.and_return("/path/to/file")
+      allow(Dir::Tmpname).to receive(:create).and_yield.and_return("/tmp/temp_path_file")
 
-      expect(described_class.new.path).to eq("/path/to/file")
+      expect(described_class.new.path).to eq("/tmp/temp_path_file")
     end
 
     it "returns a usable path" do

@@ -7,6 +7,8 @@ module MapReduce
         # nothing
       end
 
+      FileUtils.touch(@path)
+
       ObjectSpace.define_finalizer(self, self.class.finalize(@path))
     end
 
