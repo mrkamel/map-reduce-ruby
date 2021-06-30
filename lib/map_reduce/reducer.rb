@@ -24,11 +24,11 @@ module MapReduce
       @temp_paths ||= []
     end
 
-    # Adds a chunk from the mapper-phase to the reducer by registering and
-    # returning a tempfile, such that you can download a chunk e.g. from s3
-    # and write the content to this tempfile.
+    # Adds a chunk from the mapper-phase to the reducer by registering a
+    # tempfile and returning the path to that tempfile, such that you can
+    # download a chunk e.g. from s3 and write the content to this tempfile.
     #
-    # @returns [String] The newly created tempfile path.
+    # @returns [String] The path to a tempfile.
     #
     # @example
     #   chunk_path = reducer.add_chunk
