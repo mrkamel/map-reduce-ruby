@@ -6,9 +6,9 @@ RSpec.describe MapReduce::Mapper do
       allow(implementation).to receive(:map)
 
       mapper = described_class.new(implementation)
-      mapper.map("key")
+      mapper.map(key: "value")
 
-      expect(implementation).to have_received(:map).with("key", {})
+      expect(implementation).to have_received(:map).with(key: "value")
     end
 
     it "writes a chunk to disk when the buffer size is bigger than the memory limit" do
