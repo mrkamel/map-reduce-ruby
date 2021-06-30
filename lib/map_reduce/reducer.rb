@@ -28,11 +28,11 @@ module MapReduce
     # returning a tempfile, such that you can download a chunk e.g. from s3
     # and write the content to this tempfile.
     #
-    # @returns [Tempfile] The newly created tempfile.
+    # @returns [MapReduce::TempPath] The newly created tempfile path.
     #
     # @example
     #   tempfile = reducer.add_chunk
-    #   tempfile.write("downloaded blob")
+    #   File.write(tempfile.path, "downloaded blob")
 
     def add_chunk
       temp_path = TempPath.new
