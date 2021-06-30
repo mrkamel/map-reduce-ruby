@@ -1,11 +1,13 @@
 RSpec.describe MapReduce::Reducer do
   describe "#add_chunk" do
     it "creates and returns a tempfile" do
-      allow(MapReduce::TempPath).to receive(:new).and_return("tempfile")
+      temp_path = instance_double(MapReduce::TempPath)
+      allow(temp_path).to receive(:path).and_return("/path/to/file")
+      allow(MapReduce::TempPath).to receive(:new).and_return(temp_path)
 
       reducer = described_class.new(nil)
 
-      expect(reducer.add_chunk).to eq("tempfile")
+      expect(reducer.add_chunk).to eq("/path/to/file")
     end
   end
 
@@ -19,12 +21,12 @@ RSpec.describe MapReduce::Reducer do
 
       reducer = described_class.new(implementation)
 
-      File.open(reducer.add_chunk.path, "w") do |file|
+      File.open(reducer.add_chunk, "w") do |file|
         file.puts(JSON.generate([{ "key" => "key1" }, { "value" => 1 }]))
         file.puts(JSON.generate([{ "key" => "key2" }, { "value" => 1 }]))
       end
 
-      File.open(reducer.add_chunk.path, "w") do |file|
+      File.open(reducer.add_chunk, "w") do |file|
         file.puts(JSON.generate([{ "key" => "key3" }, { "value" => 1 }]))
         file.puts(JSON.generate([{ "key" => "key4" }, { "value" => 1 }]))
       end
@@ -48,20 +50,20 @@ RSpec.describe MapReduce::Reducer do
 
       reducer = described_class.new(implementation)
 
-      chunks = Array.new(3) { reducer.add_chunk }
+      paths = Array.new(3) { reducer.add_chunk }
 
-      File.open(chunks[0].path, "w") do |file|
+      File.open(paths[0], "w") do |file|
         file.puts(JSON.generate([{ key: "key1" }, { value: 1 }]))
         file.puts(JSON.generate([{ key: "key2" }, { value: 1 }]))
         file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
       end
 
-      File.open(chunks[1].path, "w") do |file|
+      File.open(paths[1], "w") do |file|
         file.puts(JSON.generate([{ key: "key2" }, { value: 1 }]))
         file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
       end
 
-      File.open(chunks[2].path, "w") do |file|
+      File.open(paths[2], "w") do |file|
         file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
         file.puts(JSON.generate([{ key: "key4" }, { value: 1 }]))
       end
@@ -75,8 +77,8 @@ RSpec.describe MapReduce::Reducer do
         ]
       )
 
-      chunks.each do |chunk|
-        expect(File.exist?(chunk.path)).to eq(false)
+      paths.each do |path|
+        expect(File.exist?(path)).to eq(false)
       end
     end
 

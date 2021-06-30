@@ -24,15 +24,15 @@ module MapReduce
       @temp_paths ||= []
     end
 
-    # Adds a chunk from the mapper-phase to the reducer by registering and
-    # returning a tempfile, such that you can download a chunk e.g. from s3
-    # and write the content to this tempfile.
+    # Adds a chunk from the mapper-phase to the reducer by registering a
+    # tempfile and returning the path to that tempfile, such that you can
+    # download a chunk e.g. from s3 and write the content to this tempfile.
     #
-    # @returns [MapReduce::TempPath] The newly created tempfile path.
+    # @returns [String] The path to a tempfile.
     #
     # @example
-    #   tempfile = reducer.add_chunk
-    #   File.write(tempfile.path, "downloaded blob")
+    #   chunk_path = reducer.add_chunk
+    #   File.write(chunk_path, "downloaded blob")
 
     def add_chunk
       temp_path = TempPath.new
@@ -41,7 +41,7 @@ module MapReduce
         @temp_paths.push(temp_path)
       end
 
-      temp_path
+      temp_path.path
     end
 
     # Performs a k-way-merge of the added chunks and yields the reduced
@@ -89,7 +89,7 @@ module MapReduce
               return
             end
 
-            File.open(add_chunk.path, "w") do |file|
+            File.open(add_chunk, "w") do |file|
               reduce_chunk(k_way_merge(files), @implementation).each do |pair|
                 file.puts JSON.generate(pair)
               end
