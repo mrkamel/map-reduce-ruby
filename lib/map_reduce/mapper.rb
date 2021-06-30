@@ -42,8 +42,8 @@ module MapReduce
     #   mapper.map("some_key")
     #   mapper.map("other_key")
 
-    def map(key)
-      @implementation.map(key) do |new_key, new_value|
+    def map(*args, **kwargs)
+      @implementation.map(*args, **kwargs) do |new_key, new_value|
         synchronize do
           @buffer.push([new_key, new_value])
 

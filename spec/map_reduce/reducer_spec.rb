@@ -39,7 +39,7 @@ RSpec.describe MapReduce::Reducer do
       )
     end
 
-    it "reduces the sorted chunks and deletes chunk as well as intermediary files" do
+    it "reduces the sorted chunks and deletes chunk files" do
       implementation = Object.new
 
       allow(implementation).to receive(:reduce) do |_, count1, count2|
@@ -48,32 +48,36 @@ RSpec.describe MapReduce::Reducer do
 
       reducer = described_class.new(implementation)
 
-      File.open(reducer.add_chunk.path, "w") do |file|
+      chunks = Array.new(3) { reducer.add_chunk }
+
+      File.open(chunks[0].path, "w") do |file|
         file.puts(JSON.generate([{ key: "key1" }, { value: 1 }]))
         file.puts(JSON.generate([{ key: "key2" }, { value: 1 }]))
         file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
       end
 
-      File.open(reducer.add_chunk.path, "w") do |file|
+      File.open(chunks[1].path, "w") do |file|
         file.puts(JSON.generate([{ key: "key2" }, { value: 1 }]))
         file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
       end
 
-      File.open(reducer.add_chunk.path, "w") do |file|
+      File.open(chunks[2].path, "w") do |file|
         file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
         file.puts(JSON.generate([{ key: "key4" }, { value: 1 }]))
       end
 
-      expect do
-        expect(reducer.reduce(chunk_limit: 2).to_a).to eq(
-          [
-            [{ "key" => "key1" }, { "value" => 1 }],
-            [{ "key" => "key2" }, { "value" => 2 }],
-            [{ "key" => "key3" }, { "value" => 3 }],
-            [{ "key" => "key4" }, { "value" => 1 }]
-          ]
-        )
-      end.to change { Dir["/tmp/**/*"].size }.by(-3)
+      expect(reducer.reduce(chunk_limit: 2).to_a).to eq(
+        [
+          [{ "key" => "key1" }, { "value" => 1 }],
+          [{ "key" => "key2" }, { "value" => 2 }],
+          [{ "key" => "key3" }, { "value" => 3 }],
+          [{ "key" => "key4" }, { "value" => 1 }]
+        ]
+      )
+
+      chunks.each do |chunk|
+        expect(File.exist?(chunk.path)).to eq(false)
+      end
     end
 
     it "does not yield when there is nothing to reduce" do
