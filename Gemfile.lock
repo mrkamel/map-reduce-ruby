@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    map_reduce (0.1.0)
+    map-reduce-ruby (1.0.0)
       json
       lazy_priority_queue
 
@@ -50,7 +50,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  map_reduce!
+  map-reduce-ruby!
   rspec
   rubocop
 
