@@ -1,10 +1,6 @@
 AllCops:
   NewCops: enable
 
-Naming/FileName:
-  Exclude:
-    - lib/map-reduce.rb
-
 Style/StringConcatenation:
   Exclude:
     - spec/**/*.rb
