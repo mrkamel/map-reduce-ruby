@@ -1,7 +1,7 @@
 require_relative "lib/map_reduce/version"
 
 Gem::Specification.new do |spec|
-  spec.name          = "mapreduce"
+  spec.name          = "map-reduce-ruby"
   spec.version       = MapReduce::VERSION
   spec.authors       = ["Benjamin Vetter"]
   spec.email         = ["vetter@flakks.com"]
@@ -9,14 +9,14 @@ Gem::Specification.new do |spec|
   spec.summary       = "The easiest way to write distributed, larger than memory map-reduce jobs"
   spec.description   = "The MapReduce gem is the easiest way to write custom, distributed, larger "\
                        "than memory map-reduce jobs"
-  spec.homepage      = "https://github.com/mrkamel/mapreduce"
+  spec.homepage      = "https://github.com/mrkamel/map-reduce-ruby"
   spec.license       = "MIT"
 
   spec.required_ruby_version = Gem::Requirement.new(">= 2.5.0")
 
   spec.metadata["homepage_uri"] = spec.homepage
-  spec.metadata["source_code_uri"] = "https://github.com/mrkamel/mapreduce"
-  spec.metadata["changelog_uri"] = "https://github.com/mrkamel/mapreduce/blob/master/CHANGELOG.md"
+  spec.metadata["source_code_uri"] = "https://github.com/mrkamel/map-reduce-ruby"
+  spec.metadata["changelog_uri"] = "https://github.com/mrkamel/map-reduce/blob/master/CHANGELOG.md"
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.

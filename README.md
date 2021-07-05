@@ -15,7 +15,7 @@ serialized as json.
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'mapreduce'
+gem 'map-reduce-ruby'
 ```
 
 And then execute:
@@ -24,7 +24,7 @@ And then execute:
 
 Or install it yourself as:
 
-    $ gem install mapreduce
+    $ gem install map-reduce-ruby
 
 ## Usage
 
@@ -203,7 +203,7 @@ git commits and the created tag, and push the `.gem` file to
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at
-https://github.com/mrkamel/mapreduce
+https://github.com/mrkamel/map-reduce-ruby
 
 ## License
 
