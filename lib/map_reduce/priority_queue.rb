@@ -1,4 +1,26 @@
 module MapReduce
+  # Since LazyPriorityQueue is using <= and >=, but not <=>, it does not
+  # support sorting array keys. Therefore we wrap the keys in SortKey, which
+  # provides those operators. See https://bugs.ruby-lang.org/issues/5574
+
+  class SortKey
+    include Comparable
+
+    attr_reader :object
+
+    def initialize(object)
+      @object = object
+    end
+
+    def <=>(other)
+      res = object <=> other.object
+
+      raise(ArgumentError, "Unable to compare #{@object.inspect} with #{other.object.inspect}") if res.nil?
+
+      res
+    end
+  end
+
   # The MapReduce::PriorityQueue implements a min priority queue using a
   # binomial heap.
 
@@ -25,7 +47,7 @@ module MapReduce
     #   priority_queue.push("some object", "some key")
 
     def push(object, key)
-      @queue.push([@sequence_number, object], key)
+      @queue.push([@sequence_number, object], SortKey.new(key))
 
       @sequence_number += 1
     end

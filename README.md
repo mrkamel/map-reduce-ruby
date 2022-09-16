@@ -120,6 +120,26 @@ mappers are finished.
 
 That's it.
 
+## Limitations for Keys
+
+You have to make sure that your keys are properly sortable in ruby. Please
+note:
+
+```ruby
+"key" < nil # comparison of String with nil failed (ArgumentError)
+
+false < true # undefined method `<' for false:FalseClass (NoMethodError)
+
+1 > "key" # comparison of Integer with String failed (ArgumentError
+
+{ "key" => "value1" } < { "key" => "value2" } #=> false
+{ "key" => "value1" } > { "key" => "value2" } #=> false
+{ "key" => "value1" } <=> { "key" => "value2" } #=> nil
+```
+
+For those reasons, it is recommended to only use strings, numbers and arrays or
+strings and numbers to be used as keys.
+
 ## Internals
 
 To fully understand the performance details, the following outlines the inner

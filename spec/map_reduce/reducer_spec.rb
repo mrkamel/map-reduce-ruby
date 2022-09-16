@@ -12,7 +12,7 @@ RSpec.describe MapReduce::Reducer do
   end
 
   describe "#reduce" do
-    it "merges the sorted chunks and yields the pairs" do
+    it "raises an argument error when the keys are not comparable" do
       implementation = Object.new
 
       allow(implementation).to receive(:reduce) do |_, count1, count2|
@@ -31,12 +31,40 @@ RSpec.describe MapReduce::Reducer do
         file.puts(JSON.generate([{ "key" => "key4" }, { "value" => 1 }]))
       end
 
+      expect { reducer.reduce(chunk_limit: 32).to_a }.to raise_error(ArgumentError)
+    end
+
+    it "merges the sorted chunks and yields the pairs" do
+      implementation = Object.new
+
+      allow(implementation).to receive(:reduce) do |_, count1, count2|
+        { "value" => count1["value"] + count2["value"] }
+      end
+
+      reducer = described_class.new(implementation)
+
+      File.open(reducer.add_chunk, "w") do |file|
+        file.puts(JSON.generate([["key1", 1], { "value" => 1 }]))
+        file.puts(JSON.generate([["key2", 1], { "value" => 1 }]))
+        file.puts(JSON.generate([["key3", 3], { "value" => 1 }]))
+        file.puts(JSON.generate([["key3", 11], { "value" => 1 }]))
+      end
+
+      File.open(reducer.add_chunk, "w") do |file|
+        file.puts(JSON.generate([["key3", 1], { "value" => 1 }]))
+        file.puts(JSON.generate([["key3", 2], { "value" => 1 }]))
+        file.puts(JSON.generate([["key4", 1], { "value" => 1 }]))
+      end
+
       expect(reducer.reduce(chunk_limit: 32).to_a).to eq(
         [
-          [{ "key" => "key1" }, { "value" => 1 }],
-          [{ "key" => "key2" }, { "value" => 1 }],
-          [{ "key" => "key3" }, { "value" => 1 }],
-          [{ "key" => "key4" }, { "value" => 1 }]
+          [["key1", 1], { "value" => 1 }],
+          [["key2", 1], { "value" => 1 }],
+          [["key3", 1], { "value" => 1 }],
+          [["key3", 2], { "value" => 1 }],
+          [["key3", 3], { "value" => 1 }],
+          [["key3", 11], { "value" => 1 }],
+          [["key4", 1], { "value" => 1 }]
         ]
       )
     end
@@ -53,27 +81,27 @@ RSpec.describe MapReduce::Reducer do
       paths = Array.new(3) { reducer.add_chunk }
 
       File.open(paths[0], "w") do |file|
-        file.puts(JSON.generate([{ key: "key1" }, { value: 1 }]))
-        file.puts(JSON.generate([{ key: "key2" }, { value: 1 }]))
-        file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
+        file.puts(JSON.generate([["key1"], { value: 1 }]))
+        file.puts(JSON.generate([["key2"], { value: 1 }]))
+        file.puts(JSON.generate([["key3"], { value: 1 }]))
       end
 
       File.open(paths[1], "w") do |file|
-        file.puts(JSON.generate([{ key: "key2" }, { value: 1 }]))
-        file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
+        file.puts(JSON.generate([["key2"], { value: 1 }]))
+        file.puts(JSON.generate([["key3"], { value: 1 }]))
       end
 
       File.open(paths[2], "w") do |file|
-        file.puts(JSON.generate([{ key: "key3" }, { value: 1 }]))
-        file.puts(JSON.generate([{ key: "key4" }, { value: 1 }]))
+        file.puts(JSON.generate([["key3"], { value: 1 }]))
+        file.puts(JSON.generate([["key4"], { value: 1 }]))
       end
 
       expect(reducer.reduce(chunk_limit: 2).to_a).to eq(
         [
-          [{ "key" => "key1" }, { "value" => 1 }],
-          [{ "key" => "key2" }, { "value" => 2 }],
-          [{ "key" => "key3" }, { "value" => 3 }],
-          [{ "key" => "key4" }, { "value" => 1 }]
+          [["key1"], { "value" => 1 }],
+          [["key2"], { "value" => 2 }],
+          [["key3"], { "value" => 3 }],
+          [["key4"], { "value" => 1 }]
         ]
       )
 
