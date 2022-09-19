@@ -138,7 +138,7 @@ false < true # undefined method `<' for false:FalseClass (NoMethodError)
 ```
 
 For those reasons, it is recommended to only use strings, numbers and arrays or
-strings and numbers to be used as keys.
+a combination of those.
 
 ## Internals
 
