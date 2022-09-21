@@ -49,3 +49,9 @@ Layout/LineLength:
 
 Style/FrozenStringLiteralComment:
   EnforcedStyle: never
+
+Style/ObjectThen:
+  Enabled: false
+
+Gemspec/RequireMFA:
+  Enabled: false

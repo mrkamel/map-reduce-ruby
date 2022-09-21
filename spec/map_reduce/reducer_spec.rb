@@ -34,6 +34,33 @@ RSpec.describe MapReduce::Reducer do
       expect { reducer.reduce(chunk_limit: 32).to_a }.to raise_error(ArgumentError)
     end
 
+    it "does not require a reduce implementation when there is nothing to reduce" do
+      implementation = Object.new
+
+      allow(implementation).to receive(:reduce).and_raise(NotImplementedError)
+
+      reducer = described_class.new(implementation)
+
+      File.open(reducer.add_chunk, "w") do |file|
+        file.puts(JSON.generate(["key1", { "value" => 1 }]))
+        file.puts(JSON.generate(["key2", { "value" => 1 }]))
+      end
+
+      File.open(reducer.add_chunk, "w") do |file|
+        file.puts(JSON.generate(["key3", { "value" => 1 }]))
+        file.puts(JSON.generate(["key4", { "value" => 1 }]))
+      end
+
+      expect(reducer.reduce(chunk_limit: 32).to_a).to eq(
+        [
+          ["key1", { "value" => 1 }],
+          ["key2", { "value" => 1 }],
+          ["key3", { "value" => 1 }],
+          ["key4", { "value" => 1 }]
+        ]
+      )
+    end
+
     it "merges the sorted chunks and yields the pairs" do
       implementation = Object.new
 

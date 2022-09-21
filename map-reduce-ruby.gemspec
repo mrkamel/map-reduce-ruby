@@ -7,7 +7,7 @@ Gem::Specification.new do |spec|
   spec.email         = ["vetter@flakks.com"]
 
   spec.summary       = "The easiest way to write distributed, larger than memory map-reduce jobs"
-  spec.description   = "The MapReduce gem is the easiest way to write custom, distributed, larger "\
+  spec.description   = "The MapReduce gem is the easiest way to write custom, distributed, larger " \
                        "than memory map-reduce jobs"
   spec.homepage      = "https://github.com/mrkamel/map-reduce-ruby"
   spec.license       = "MIT"

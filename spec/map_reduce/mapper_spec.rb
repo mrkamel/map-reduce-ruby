@@ -159,5 +159,29 @@ RSpec.describe MapReduce::Mapper do
         ]
       )
     end
+
+    it "does not neccessarily need a reduce implementation when there is nothing to reduce" do
+      implementation = Object.new
+
+      allow(implementation).to receive(:map)
+        .and_yield("key3", { "value" => 1 })
+        .and_yield("key1", { "value" => 1 })
+        .and_yield("key2", { "value" => 1 })
+
+      allow(implementation).to receive(:reduce).and_raise(NotImplementedError)
+
+      mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(8), memory_limit: 40)
+      mapper.map("key")
+
+      result = mapper.shuffle.map { |partition, tempfile| [partition, tempfile.read] }
+
+      expect(result).to eq(
+        [
+          [1, JSON.generate(["key1", { "value" => 1 }]) + "\n"],
+          [2, JSON.generate(["key2", { "value" => 1 }]) + "\n"],
+          [6, JSON.generate(["key3", { "value" => 1 }]) + "\n"]
+        ]
+      )
+    end
   end
 end
