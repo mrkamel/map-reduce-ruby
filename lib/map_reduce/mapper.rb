@@ -96,7 +96,7 @@ module MapReduce
     def write_chunk
       tempfile = Tempfile.new
 
-      @buffer.sort_by! { |item| JSON.generate(item.first) }
+      @buffer.sort_by!(&:first)
 
       reduce_chunk(@buffer, @implementation).each do |pair|
         tempfile.puts JSON.generate(pair)
