@@ -7,8 +7,7 @@ than memory map-reduce jobs by using your local disk and some arbitrary storage
 layer like s3. You can specify how much memory you are willing to offer and
 MapReduce will use its buffers accordingly. Finally, you can use your already
 existing background job system like `sidekiq` or one of its various
-alternatives. Finally, your keys and values can be everything that can be
-serialized as json.
+alternatives.
 
 ## Installation
 
@@ -30,9 +29,7 @@ Or install it yourself as:
 
 Any map-reduce job consists of an implementation of your `map` function, your
 `reduce` function and worker code. So let's start with an implementation for a
-word count map-reduce task which fetches txt documents from the web. Please
-note that your keys and values can be everything that can be serialized as
-json, but nothing else.
+word count map-reduce task which fetches txt documents from the web.
 
 ```ruby
 class WordCounter
@@ -68,8 +65,8 @@ class WordCountMapper
 end
 ```
 
-Please note that `MapReduce::HashPartitioner.new(16)` states that we want split
-the dataset into 16 partitions (i.e. 0, 1, ... 15). Finally, we need some
+Please note that `MapReduce::HashPartitioner.new(16)` states that we want to
+split the dataset into 16 partitions (i.e. 0, 1, ... 15). Finally, we need some
 worker code to run the reduce part:
 
 ```ruby
