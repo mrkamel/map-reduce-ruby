@@ -48,4 +48,3 @@ RSpec.describe TestMergeable do
     end
   end
 end
-
