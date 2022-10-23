@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v2.1.0
+
+* Do not reduce in `MapReduce::Mapper` when no `reduce` implementation is given
+
 ## v2.0.0
 
 * [BREAKING] Keys are no longer automatically converted to json before using

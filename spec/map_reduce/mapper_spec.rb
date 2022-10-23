@@ -87,6 +87,36 @@ RSpec.describe MapReduce::Mapper do
         ].join("\n") + "\n"
       )
     end
+
+    it "only sorts, but does not reduce the chunks when there is no reduce implementation" do
+      implementation = Object.new
+
+      allow(implementation).to receive(:map)
+        .and_yield(["key3", 1], { "value" => 1 })
+        .and_yield(["key3", 3], { "value" => 1 })
+        .and_yield(["key1", 1], { "value" => 1 })
+        .and_yield(["key2", 1], { "value" => 1 })
+        .and_yield(["key1", 1], { "value" => 1 })
+        .and_yield(["key3", 11], { "value" => 1 })
+        .and_yield(["key3", 2], { "value" => 1 })
+
+      mapper = described_class.new(implementation, memory_limit: 90)
+      mapper.map("key")
+
+      result = mapper.shuffle.map { |_, tempfile| tempfile.read }.join
+
+      expect(result).to eq(
+        [
+          JSON.generate([["key1", 1], { "value" => 1 }]),
+          JSON.generate([["key1", 1], { "value" => 1 }]),
+          JSON.generate([["key2", 1], { "value" => 1 }]),
+          JSON.generate([["key3", 1], { "value" => 1 }]),
+          JSON.generate([["key3", 2], { "value" => 1 }]),
+          JSON.generate([["key3", 3], { "value" => 1 }]),
+          JSON.generate([["key3", 11], { "value" => 1 }])
+        ].join("\n") + "\n"
+      )
+    end
   end
 
   describe "#shuffle" do
