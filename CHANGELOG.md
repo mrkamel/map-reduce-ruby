@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v2.1.1
+
+* Fix in `MapReduce::Mapper` when no `reduce` implementation is given
+
 ## v2.1.0
 
 * Do not reduce in `MapReduce::Mapper` when no `reduce` implementation is given

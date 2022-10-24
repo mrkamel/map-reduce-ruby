@@ -101,7 +101,10 @@ module MapReduce
 
       @buffer.sort_by!(&:first)
 
-      reduce_chunk(@buffer, @implementation).each do |pair|
+      chunk = @buffer
+      chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
+
+      chunk.each do |pair|
         tempfile.puts JSON.generate(pair)
       end
 
