@@ -20,6 +20,16 @@ module MapReduce
     def k_way_merge(files)
       return enum_for(:k_way_merge, files) unless block_given?
 
+      if files.size == 1
+        files.first.each_line do |line|
+          yield(JSON.parse(line))
+        end
+
+        files.each(&:rewind)
+
+        return
+      end
+
       queue = PriorityQueue.new
 
       files.each_with_index do |file, index|

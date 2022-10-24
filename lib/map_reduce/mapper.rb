@@ -71,7 +71,10 @@ module MapReduce
 
       partitions = {}
 
-      reduce_chunk(k_way_merge(@chunks), @implementation).each do |pair|
+      chunk = k_way_merge(@chunks)
+      chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
+
+      chunk.each do |pair|
         partition = @partitioner.call(pair[0])
 
         (partitions[partition] ||= Tempfile.new).puts(JSON.generate(pair))
