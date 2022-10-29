@@ -75,29 +75,28 @@ module MapReduce
       begin
         loop do
           slice = @temp_paths.shift(chunk_limit)
-          temp_paths = slice.select { |temp_path| File.exist?(temp_path.path) }
 
-          begin
-            if @temp_paths.empty?
-              reduce_chunk(k_way_merge(temp_paths, chunk_limit: chunk_limit), @implementation).each do |pair|
-                block.call(pair)
-              end
-
-              return
+          if @temp_paths.empty?
+            reduce_chunk(k_way_merge(slice, chunk_limit: chunk_limit), @implementation).each do |pair|
+              block.call(pair)
             end
 
-            File.open(add_chunk, "w") do |file|
-              reduce_chunk(k_way_merge(temp_paths, chunk_limit: chunk_limit), @implementation).each do |pair|
-                file.puts JSON.generate(pair)
-              end
-            end
-          ensure
-            slice.each(&:delete)
+            return
           end
+
+          File.open(add_chunk, "w") do |file|
+            reduce_chunk(k_way_merge(slice, chunk_limit: chunk_limit), @implementation).each do |pair|
+              file.puts JSON.generate(pair)
+            end
+          end
+        ensure
+          slice&.each(&:delete)
         end
       ensure
         @temp_paths.each(&:delete)
       end
+
+      nil
     end
   end
 end
