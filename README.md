@@ -57,9 +57,11 @@ class WordCountMapper
     mapper = MapReduce::Mapper.new(WordCounter.new, partitioner: MapReduce::HashPartitioner.new(16), memory_limit: 100.megabytes)
     mapper.map(url)
 
-    mapper.shuffle do |partition, tempfile|
-      # store content of tempfile e.g. on s3:
-      bucket.object("map_reduce/jobs/#{job_id}/partitions/#{partition}/chunk.#{mapper_id}.json").put(body: tempfile)
+    mapper.shuffle(chunk_limit: 64) do |partitions|
+      partitions.each do |partition, path|
+        # store content of tempfile e.g. on s3:
+        bucket.object("map_reduce/jobs/#{job_id}/partitions/#{partition}/chunk.#{mapper_id}.json").put(body: File.open(path))
+      end
     end
   end
 end
@@ -205,6 +207,10 @@ interface of callables, could even be expressed as a simple one-liner:
 MyPartitioner = proc { |key| Digest::SHA1.hexdigest(JSON.generate(key))[0..4].to_i(16) % 8 }
 ```
 
+## Semantic Versioning
+
+MapReduce is using Semantic Versioning: [SemVer](http://semver.org/)
+
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run
@@ -224,5 +230,5 @@ https://github.com/mrkamel/map-reduce-ruby
 
 ## License
 
-The gem is available as open source under the terms of the [MIT
-License](https://opensource.org/licenses/MIT).
+The gem is available as open source under the terms of the
+[MIT License](https://opensource.org/licenses/MIT).

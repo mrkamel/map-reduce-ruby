@@ -142,8 +142,7 @@ RSpec.describe MapReduce::Reducer do
     end
 
     it "raises a InvalidChunkLimit error when chunk_limit is less than 2" do
-      expect { described_class.new(Object.new).reduce(chunk_limit: 1).to_a }
-        .to raise_error(described_class::InvalidChunkLimit)
+      expect { described_class.new(Object.new).reduce(chunk_limit: 1).to_a }.to raise_error(MapReduce::InvalidChunkLimit)
     end
   end
 end

@@ -6,8 +6,6 @@ module MapReduce
     include Reduceable
     include MonitorMixin
 
-    attr_reader :partitions
-
     # Initializes a new mapper.
     #
     # @param implementation Your map-reduce implementation, i.e. an object
@@ -45,9 +43,11 @@ module MapReduce
     def map(*args, **kwargs)
       @implementation.map(*args, **kwargs) do |new_key, new_value|
         synchronize do
-          @buffer.push([new_key, new_value])
+          partition = @partitioner.call(new_key)
+          item = [[partition, new_key], new_value]
 
-          @buffer_size += JSON.generate([new_key, new_value]).bytesize
+          @buffer.push(item)
+          @buffer_size += JSON.generate(item).bytesize
 
           write_chunk if @buffer_size >= @memory_limit
         end
@@ -55,41 +55,54 @@ module MapReduce
     end
 
     # Performs a k-way-merge of the sorted chunks written to tempfiles while
-    # already reducing the result using your map-reduce implementation and
-    # splitting the dataset into partitions. Finally yields each partition with
-    # the tempfile containing the data of the partition.
+    # already reducing the result using your map-reduce implementation (if
+    # available) and splitting the dataset into partitions. Finally yields each
+    # partition with the tempfile containing the data of the partition.
+    #
+    # @param chunk_limit [Integer] The maximum number of files to process
+    #   at the same time. Most useful when you run on a system where the
+    #   number of open file descriptors is limited. If your number of file
+    #   descriptors is unlimited, you want to set it to a higher number to
+    #   avoid the overhead of multiple runs.
     #
     # @example
     #   mapper.shuffle do |partition, tempfile|
     #     # store data e.g. on s3
     #   end
 
-    def shuffle(&block)
-      return enum_for(:shuffle) unless block_given?
+    def shuffle(chunk_limit:)
+      raise(InvalidChunkLimit, "Chunk limit must be >= 2") unless chunk_limit >= 2
 
       write_chunk if @buffer_size > 0
 
-      partitions = {}
-
-      chunk = k_way_merge(@chunks)
+      chunk = k_way_merge(@chunks, chunk_limit: chunk_limit)
       chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
 
-      chunk.each do |pair|
-        partition = @partitioner.call(pair[0])
+      @partitions = {}
+      current_partition = nil
+      file = nil
 
-        (partitions[partition] ||= Tempfile.new).puts(JSON.generate(pair))
+      chunk.each do |((new_partition, key), value)|
+        if new_partition != current_partition
+          file&.close
+
+          current_partition = new_partition
+          temp_path = TempPath.new
+          @partitions[new_partition] = temp_path
+          file = File.open(temp_path.path, "w+")
+        end
+
+        file.puts(JSON.generate([key, value]))
       end
 
-      @chunks.each { |tempfile| tempfile.close(true) }
+      file&.close
+
+      @chunks.each(&:delete)
       @chunks = []
 
-      partitions.each_value(&:rewind)
+      yield(@partitions.transform_values(&:path))
 
-      partitions.each do |partition, tempfile|
-        block.call(partition, tempfile)
-      end
-
-      partitions.each_value { |tempfile| tempfile.close(true) }
+      @partitions.each_value(&:delete)
 
       nil
     end
@@ -97,20 +110,20 @@ module MapReduce
     private
 
     def write_chunk
-      tempfile = Tempfile.new
+      temp_path = TempPath.new
 
       @buffer.sort_by!(&:first)
 
       chunk = @buffer
       chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
 
-      chunk.each do |pair|
-        tempfile.puts JSON.generate(pair)
+      File.open(temp_path.path, "w+") do |file|
+        chunk.each do |pair|
+          file.puts JSON.generate(pair)
+        end
       end
 
-      tempfile.rewind
-
-      @chunks.push(tempfile)
+      @chunks.push(temp_path)
 
       @buffer_size = 0
       @buffer = []

@@ -6,8 +6,6 @@ module MapReduce
     include Reduceable
     include MonitorMixin
 
-    class InvalidChunkLimit < StandardError; end
-
     # Initializes a new reducer.
     #
     # @param implementation Your map-reduce implementation, i.e. an object
@@ -77,12 +75,11 @@ module MapReduce
       begin
         loop do
           slice = @temp_paths.shift(chunk_limit)
-          files = slice.select { |temp_path| File.exist?(temp_path.path) }
-                       .map { |temp_path| File.open(temp_path.path, "r") }
+          temp_paths = slice.select { |temp_path| File.exist?(temp_path.path) }
 
           begin
             if @temp_paths.empty?
-              reduce_chunk(k_way_merge(files), @implementation).each do |pair|
+              reduce_chunk(k_way_merge(temp_paths, chunk_limit: chunk_limit), @implementation).each do |pair|
                 block.call(pair)
               end
 
@@ -90,12 +87,11 @@ module MapReduce
             end
 
             File.open(add_chunk, "w") do |file|
-              reduce_chunk(k_way_merge(files), @implementation).each do |pair|
+              reduce_chunk(k_way_merge(temp_paths, chunk_limit: chunk_limit), @implementation).each do |pair|
                 file.puts JSON.generate(pair)
               end
             end
           ensure
-            files.each(&:close)
             slice.each(&:delete)
           end
         end
