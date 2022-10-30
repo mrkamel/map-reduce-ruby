@@ -59,7 +59,7 @@ class WordCountMapper
 
     mapper.shuffle(chunk_limit: 64) do |partitions|
       partitions.each do |partition, path|
-        # store content of the file located at path e.g. on s3:
+        # store content of the tempfile located at path e.g. on s3:
         bucket.object("map_reduce/jobs/#{job_id}/partitions/#{partition}/chunk.#{mapper_id}.json").put(body: File.open(path))
       end
     end
