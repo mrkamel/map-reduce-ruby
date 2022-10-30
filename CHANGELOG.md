@@ -9,8 +9,8 @@
 * [BREAKING] `MapReduce::Reducer::InvalidChunkLimit` is now
   `MapReduce::InvalidChunkLimit` and inherits from `MapReduce::Error` being the
   base class for all errors
-* `MapReduce::Mapper#shuffle` no longer keeps all partition files open, but
-  not writes them one after another to further strictly reduce the number of
+* `MapReduce::Mapper#shuffle` no longer keeps all partition files open. Instead,
+  it writes them one after another to further strictly reduce the number of
   open file descriptors.
 
 ## v2.1.1
