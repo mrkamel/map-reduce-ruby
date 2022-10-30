@@ -57,7 +57,7 @@ module MapReduce
     # Performs a k-way-merge of the sorted chunks written to tempfiles while
     # already reducing the result using your map-reduce implementation (if
     # available) and splitting the dataset into partitions. Finally yields a
-    # hash of partition/path pairs containing the data for the partitions.
+    # hash of (partition, path) pairs containing the data for the partitions.
     #
     # @param chunk_limit [Integer] The maximum number of files to process
     #   at the same time. Most useful when you run on a system where the
