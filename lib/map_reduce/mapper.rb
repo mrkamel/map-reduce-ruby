@@ -56,8 +56,8 @@ module MapReduce
 
     # Performs a k-way-merge of the sorted chunks written to tempfiles while
     # already reducing the result using your map-reduce implementation (if
-    # available) and splitting the dataset into partitions. Finally yields each
-    # partition with the tempfile containing the data of the partition.
+    # available) and splitting the dataset into partitions. Finally yields a
+    # hash of partition/path pairs containing the data for the partitions.
     #
     # @param chunk_limit [Integer] The maximum number of files to process
     #   at the same time. Most useful when you run on a system where the
@@ -66,8 +66,10 @@ module MapReduce
     #   avoid the overhead of multiple runs.
     #
     # @example
-    #   mapper.shuffle do |partition, tempfile|
-    #     # store data e.g. on s3
+    #   mapper.shuffle do |partitions|
+    #     partitions.each do |partition, path|
+    #       # store data e.g. on s3
+    #     end
     #   end
 
     def shuffle(chunk_limit:)
