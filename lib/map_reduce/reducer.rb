@@ -84,7 +84,7 @@ module MapReduce
             return
           end
 
-          File.open(add_chunk, "w") do |file|
+          File.open(add_chunk, "w+") do |file|
             reduce_chunk(k_way_merge(slice, chunk_limit: chunk_limit), @implementation).each do |pair|
               file.puts JSON.generate(pair)
             end
