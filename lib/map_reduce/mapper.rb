@@ -76,19 +76,21 @@ module MapReduce
     def shuffle(chunk_limit:)
       raise(InvalidChunkLimit, "Chunk limit must be >= 2") unless chunk_limit >= 2
 
-      write_chunk if @buffer_size > 0
+      begin
+        write_chunk if @buffer_size > 0
 
-      chunk = k_way_merge(@chunks, chunk_limit: chunk_limit)
-      chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
+        chunk = k_way_merge(@chunks, chunk_limit: chunk_limit)
+        chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
 
-      @partitions = split_partitions(chunk)
+        partitions = split_partitions(chunk)
 
-      yield(@partitions.transform_values(&:path))
+        yield(partitions.transform_values(&:path))
+      ensure
+        partitions.each_value(&:delete)
 
-      @chunks.each(&:delete)
-      @chunks = []
-
-      @partitions.each_value(&:delete)
+        @chunks.each(&:delete)
+        @chunks = []
+      end
 
       nil
     end

@@ -68,7 +68,7 @@ module MapReduce
     #   end
 
     def reduce(chunk_limit:, &block)
-      return enum_for(:reduce, chunk_limit: chunk_limit) unless block_given?
+      return enum_for(__method__, chunk_limit: chunk_limit) unless block_given?
 
       raise(InvalidChunkLimit, "Chunk limit must be >= 2") unless chunk_limit >= 2
 
@@ -94,6 +94,7 @@ module MapReduce
         end
       ensure
         @temp_paths.each(&:delete)
+        @temp_paths = []
       end
 
       nil
