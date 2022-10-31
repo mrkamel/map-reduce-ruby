@@ -82,7 +82,7 @@ module MapReduce
         chunk = k_way_merge(@chunks, chunk_limit: chunk_limit)
         chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
 
-        partitions = split_partitions(chunk)
+        partitions = split_chunk(chunk)
 
         yield(partitions.transform_values(&:path))
       ensure
@@ -97,7 +97,7 @@ module MapReduce
 
     private
 
-    def split_partitions(chunk)
+    def split_chunk(chunk)
       res = {}
       current_partition = nil
       file = nil
