@@ -6,6 +6,8 @@
   pairs, which e.g. allows to upload the files in parallel
 * [BREAKING] `MapReduce::Mapper#shuffle` now requires a `chunk_limit`. This
   allows to further limit the maximum number of open file descriptors
+* [BREAKING] `MapReduce::Mapper#shuffle` no longer returns an `Enumerator` when
+  no block is given
 * [BREAKING] `MapReduce::Reducer::InvalidChunkLimit` is now
   `MapReduce::InvalidChunkLimit` and inherits from `MapReduce::Error` being the
   base class for all errors
