@@ -26,6 +26,7 @@ module MapReduce
       return enum_for(__method__, temp_paths, chunk_limit: chunk_limit) unless block_given?
 
       dupped_temp_paths = temp_paths.dup
+      additional_temp_paths = []
 
       while dupped_temp_paths.size > chunk_limit
         temp_path_out = TempPath.new
@@ -41,6 +42,7 @@ module MapReduce
         end
 
         dupped_temp_paths.push(temp_path_out)
+        additional_temp_paths.push(temp_path_out)
       end
 
       files = dupped_temp_paths.map { |temp_path| File.open(temp_path.path, "r") }
@@ -48,6 +50,8 @@ module MapReduce
       files.each(&:close)
 
       nil
+    ensure
+      additional_temp_paths&.each(&:delete)
     end
 
     # Performs the actual k-way-merge of the specified files.

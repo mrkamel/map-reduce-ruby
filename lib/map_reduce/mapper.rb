@@ -81,7 +81,22 @@ module MapReduce
       chunk = k_way_merge(@chunks, chunk_limit: chunk_limit)
       chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
 
-      @partitions = {}
+      @partitions = split_partitions(chunk)
+
+      yield(@partitions.transform_values(&:path))
+
+      @chunks.each(&:delete)
+      @chunks = []
+
+      @partitions.each_value(&:delete)
+
+      nil
+    end
+
+    private
+
+    def split_partitions(chunk)
+      res = {}
       current_partition = nil
       file = nil
 
@@ -91,7 +106,7 @@ module MapReduce
 
           current_partition = new_partition
           temp_path = TempPath.new
-          @partitions[new_partition] = temp_path
+          res[new_partition] = temp_path
           file = File.open(temp_path.path, "w+")
         end
 
@@ -100,17 +115,8 @@ module MapReduce
 
       file&.close
 
-      @chunks.each(&:delete)
-      @chunks = []
-
-      yield(@partitions.transform_values(&:path))
-
-      @partitions.each_value(&:delete)
-
-      nil
+      res
     end
-
-    private
 
     def write_chunk
       temp_path = TempPath.new
