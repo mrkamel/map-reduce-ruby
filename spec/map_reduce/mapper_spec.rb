@@ -11,22 +11,11 @@ RSpec.describe MapReduce::Mapper do
       expect(implementation).to have_received(:map).with(key: "value")
     end
 
-    it "raises an argument error when the keys are not comparable" do
-      implementation = Object.new
-
-      allow(implementation).to receive(:map)
-        .and_yield({ "key" => "key1" }, { "value" => "a" * 10 })
-        .and_yield({ "key" => "key2" }, { "value" => "b" * 10 })
-
-      mapper = described_class.new(implementation, memory_limit: 50)
-      expect { mapper.map("key") }.to raise_error(ArgumentError)
-    end
-
     it "writes a chunk to disk when the buffer size is bigger than the memory limit" do
-      tempfile1 = Tempfile.new
-      tempfile2 = Tempfile.new
+      temp_path1 = MapReduce::TempPath.new
+      temp_path2 = MapReduce::TempPath.new
 
-      allow(Tempfile).to receive(:new).and_return(tempfile1, tempfile2)
+      allow(MapReduce::TempPath).to receive(:new).and_return(temp_path1, temp_path2)
 
       implementation = Object.new
 
@@ -40,17 +29,17 @@ RSpec.describe MapReduce::Mapper do
       mapper = described_class.new(implementation, memory_limit: 50)
       mapper.map("key")
 
-      expect(tempfile1.tap(&:rewind).read).to eq(
+      expect(File.read(temp_path1.path)).to eq(
         [
-          JSON.generate([["key1"], { "value" => "a" * 10 }]),
-          JSON.generate([["key2"], { "value" => "b" * 10 }])
+          JSON.generate([[2, ["key2"]], { "value" => "b" * 10 }]),
+          JSON.generate([[31, ["key1"]], { "value" => "a" * 10 }])
         ].join("\n") + "\n"
       )
 
-      expect(tempfile2.tap(&:rewind).read).to eq(
+      expect(File.read(temp_path2.path)).to eq(
         [
-          JSON.generate([["key3"], { "value" => "c" * 10 }]),
-          JSON.generate([["key4"], { "value" => "d" * 10 }])
+          JSON.generate([[0, ["key3"]], { "value" => "c" * 10 }]),
+          JSON.generate([[30, ["key4"]], { "value" => "d" * 10 }])
         ].join("\n") + "\n"
       )
     end
@@ -72,20 +61,28 @@ RSpec.describe MapReduce::Mapper do
         { "value" => count1["value"] + count2["value"] }
       end
 
-      mapper = described_class.new(implementation, memory_limit: 90)
+      mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(2), memory_limit: 90)
       mapper.map("key")
 
-      result = mapper.shuffle.map { |_, tempfile| tempfile.read }.join
+      result = {}
+
+      mapper.shuffle(chunk_limit: 64) do |partitions|
+        partitions.each do |partition, path|
+          result[partition] = File.open(path).each_line.map { |line| JSON.parse(line) }
+        end
+      end
 
       expect(result).to eq(
-        [
-          JSON.generate([["key1", 1], { "value" => 2 }]),
-          JSON.generate([["key2", 1], { "value" => 1 }]),
-          JSON.generate([["key3", 1], { "value" => 2 }]),
-          JSON.generate([["key3", 2], { "value" => 1 }]),
-          JSON.generate([["key3", 3], { "value" => 1 }]),
-          JSON.generate([["key3", 11], { "value" => 1 }])
-        ].join("\n") + "\n"
+        0 => [
+          [["key1", 1], { "value" => 2 }],
+          [["key2", 1], { "value" => 1 }],
+          [["key3", 3], { "value" => 1 }],
+          [["key3", 11], { "value" => 1 }]
+        ],
+        1 => [
+          [["key3", 1], { "value" => 2 }],
+          [["key3", 2], { "value" => 1 }]
+        ]
       )
     end
 
@@ -101,21 +98,29 @@ RSpec.describe MapReduce::Mapper do
         .and_yield(["key3", 11], { "value" => 1 })
         .and_yield(["key3", 2], { "value" => 1 })
 
-      mapper = described_class.new(implementation)
+      mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(2))
       mapper.map("key")
 
-      result = mapper.shuffle.map { |_, tempfile| tempfile.read }.join
+      result = {}
+
+      mapper.shuffle(chunk_limit: 64) do |partitions|
+        partitions.each do |partition, path|
+          result[partition] = File.open(path).each_line.map { |line| JSON.parse(line) }
+        end
+      end
 
       expect(result).to eq(
-        [
-          JSON.generate([["key1", 1], { "value" => 1 }]),
-          JSON.generate([["key1", 1], { "value" => 1 }]),
-          JSON.generate([["key2", 1], { "value" => 1 }]),
-          JSON.generate([["key3", 1], { "value" => 1 }]),
-          JSON.generate([["key3", 2], { "value" => 1 }]),
-          JSON.generate([["key3", 3], { "value" => 1 }]),
-          JSON.generate([["key3", 11], { "value" => 1 }])
-        ].join("\n") + "\n"
+        0 => [
+          [["key1", 1], { "value" => 1 }],
+          [["key1", 1], { "value" => 1 }],
+          [["key2", 1], { "value" => 1 }],
+          [["key3", 3], { "value" => 1 }],
+          [["key3", 11], { "value" => 1 }]
+        ],
+        1 => [
+          [["key3", 1], { "value" => 1 }],
+          [["key3", 2], { "value" => 1 }]
+        ]
       )
     end
   end
@@ -134,30 +139,25 @@ RSpec.describe MapReduce::Mapper do
       mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(4), memory_limit: 100)
       mapper.map("key")
 
-      result = mapper.shuffle.map { |partition, tempfile| [partition, tempfile.read] }
+      result = {}
+
+      mapper.shuffle(chunk_limit: 64) do |partitions|
+        partitions.each do |partition, path|
+          result[partition] = File.open(path).each_line.map { |line| JSON.parse(line) }
+        end
+      end
 
       expect(result).to eq(
-        [
-          [
-            3,
-            [
-              JSON.generate([["key1"], { "value" => "a" * 10 }]),
-              JSON.generate([["key5"], { "value" => "e" * 10 }])
-            ].join("\n") + "\n"
-          ],
-          [
-            2,
-            [
-              JSON.generate([["key2"], { "value" => "b" * 10 }]),
-              JSON.generate([["key4"], { "value" => "d" * 10 }])
-            ].join("\n") + "\n"
-          ],
-          [
-            0,
-            [
-              JSON.generate([["key3"], { "value" => "c" * 10 }])
-            ].join("\n") + "\n"
-          ]
+        0 => [
+          [["key3"], { "value" => "c" * 10 }]
+        ],
+        2 => [
+          [["key2"], { "value" => "b" * 10 }],
+          [["key4"], { "value" => "d" * 10 }]
+        ],
+        3 => [
+          [["key1"], { "value" => "a" * 10 }],
+          [["key5"], { "value" => "e" * 10 }]
         ]
       )
     end
@@ -177,17 +177,20 @@ RSpec.describe MapReduce::Mapper do
         { "value" => count1["value"] + count2["value"] }
       end
 
-      mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(8), memory_limit: 40)
+      mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(2), memory_limit: 40)
       mapper.map("key")
 
-      result = mapper.shuffle.map { |partition, tempfile| [partition, tempfile.read] }
+      result = {}
+
+      mapper.shuffle(chunk_limit: 64) do |partitions|
+        partitions.each do |partition, path|
+          result[partition] = File.open(path).each_line.map { |line| JSON.parse(line) }
+        end
+      end
 
       expect(result).to eq(
-        [
-          [7, JSON.generate([["key1"], { "value" => 3 }]) + "\n"],
-          [2, JSON.generate([["key2"], { "value" => 1 }]) + "\n"],
-          [0, JSON.generate([["key3"], { "value" => 2 }]) + "\n"]
-        ]
+        0 => [[["key2"], { "value" => 1 }], [["key3"], { "value" => 2 }]],
+        1 => [[["key1"], { "value" => 3 }]]
       )
     end
 
@@ -204,15 +207,23 @@ RSpec.describe MapReduce::Mapper do
       mapper = described_class.new(implementation, partitioner: MapReduce::HashPartitioner.new(8), memory_limit: 40)
       mapper.map("key")
 
-      result = mapper.shuffle.map { |partition, tempfile| [partition, tempfile.read] }
+      result = {}
+
+      mapper.shuffle(chunk_limit: 64) do |partitions|
+        partitions.each do |partition, path|
+          result[partition] = File.open(path).each_line.map { |line| JSON.parse(line) }
+        end
+      end
 
       expect(result).to eq(
-        [
-          [1, JSON.generate(["key1", { "value" => 1 }]) + "\n"],
-          [2, JSON.generate(["key2", { "value" => 1 }]) + "\n"],
-          [6, JSON.generate(["key3", { "value" => 1 }]) + "\n"]
-        ]
+        1 => [["key1", { "value" => 1 }]],
+        2 => [["key2", { "value" => 1 }]],
+        6 => [["key3", { "value" => 1 }]]
       )
+    end
+
+    it "raises a InvalidChunkLimit error when chunk_limit is less than 2" do
+      expect { described_class.new(Object.new).shuffle(chunk_limit: 1, &proc {}) }.to raise_error(MapReduce::InvalidChunkLimit)
     end
   end
 end

@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## v3.0.0
+
+* [BREAKING] `MapReduce::Mapper#shuffle` now yields a hash of (partition, path)
+  pairs, which e.g. allows to upload the files in parallel
+* [BREAKING] `MapReduce::Mapper#shuffle` now requires a `chunk_limit`. This
+  allows to further limit the maximum number of open file descriptors
+* [BREAKING] `MapReduce::Mapper#shuffle` no longer returns an `Enumerator` when
+  no block is given
+* [BREAKING] `MapReduce::Reducer::InvalidChunkLimit` is now
+  `MapReduce::InvalidChunkLimit` and inherits from `MapReduce::Error` being the
+  base class for all errors
+* `MapReduce::Mapper#shuffle` no longer keeps all partition files open. Instead,
+  it writes them one after another to further strictly reduce the number of
+  open file descriptors.
+
 ## v2.1.1
 
 * Fix in `MapReduce::Mapper` when no `reduce` implementation is given

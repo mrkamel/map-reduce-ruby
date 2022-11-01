@@ -6,8 +6,6 @@ module MapReduce
     include Reduceable
     include MonitorMixin
 
-    class InvalidChunkLimit < StandardError; end
-
     # Initializes a new reducer.
     #
     # @param implementation Your map-reduce implementation, i.e. an object
@@ -70,38 +68,36 @@ module MapReduce
     #   end
 
     def reduce(chunk_limit:, &block)
-      return enum_for(:reduce, chunk_limit: chunk_limit) unless block_given?
+      return enum_for(__method__, chunk_limit: chunk_limit) unless block_given?
 
       raise(InvalidChunkLimit, "Chunk limit must be >= 2") unless chunk_limit >= 2
 
       begin
         loop do
           slice = @temp_paths.shift(chunk_limit)
-          files = slice.select { |temp_path| File.exist?(temp_path.path) }
-                       .map { |temp_path| File.open(temp_path.path, "r") }
 
-          begin
-            if @temp_paths.empty?
-              reduce_chunk(k_way_merge(files), @implementation).each do |pair|
-                block.call(pair)
-              end
-
-              return
+          if @temp_paths.empty?
+            reduce_chunk(k_way_merge(slice, chunk_limit: chunk_limit), @implementation).each do |pair|
+              block.call(pair)
             end
 
-            File.open(add_chunk, "w") do |file|
-              reduce_chunk(k_way_merge(files), @implementation).each do |pair|
-                file.puts JSON.generate(pair)
-              end
-            end
-          ensure
-            files.each(&:close)
-            slice.each(&:delete)
+            return
           end
+
+          File.open(add_chunk, "w+") do |file|
+            reduce_chunk(k_way_merge(slice, chunk_limit: chunk_limit), @implementation).each do |pair|
+              file.puts JSON.generate(pair)
+            end
+          end
+        ensure
+          slice&.each(&:delete)
         end
       ensure
         @temp_paths.each(&:delete)
+        @temp_paths = []
       end
+
+      nil
     end
   end
 end

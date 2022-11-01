@@ -45,7 +45,7 @@ Style/StringLiteralsInInterpolation:
   EnforcedStyle: double_quotes
 
 Layout/LineLength:
-  Max: 120
+  Max: 250
 
 Style/FrozenStringLiteralComment:
   EnforcedStyle: never
@@ -54,4 +54,7 @@ Style/ObjectThen:
   Enabled: false
 
 Gemspec/RequireMFA:
+  Enabled: false
+
+Style/HashTransformValues:
   Enabled: false

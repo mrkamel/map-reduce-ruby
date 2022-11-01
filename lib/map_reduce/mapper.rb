@@ -6,8 +6,6 @@ module MapReduce
     include Reduceable
     include MonitorMixin
 
-    attr_reader :partitions
-
     # Initializes a new mapper.
     #
     # @param implementation Your map-reduce implementation, i.e. an object
@@ -45,9 +43,11 @@ module MapReduce
     def map(*args, **kwargs)
       @implementation.map(*args, **kwargs) do |new_key, new_value|
         synchronize do
-          @buffer.push([new_key, new_value])
+          partition = @partitioner.call(new_key)
+          item = [[partition, new_key], new_value]
 
-          @buffer_size += JSON.generate([new_key, new_value]).bytesize
+          @buffer.push(item)
+          @buffer_size += JSON.generate(item).bytesize
 
           write_chunk if @buffer_size >= @memory_limit
         end
@@ -55,62 +55,86 @@ module MapReduce
     end
 
     # Performs a k-way-merge of the sorted chunks written to tempfiles while
-    # already reducing the result using your map-reduce implementation and
-    # splitting the dataset into partitions. Finally yields each partition with
-    # the tempfile containing the data of the partition.
+    # already reducing the result using your map-reduce implementation (if
+    # available) and splitting the dataset into partitions. Finally yields a
+    # hash of (partition, path) pairs containing the data for the partitions
+    # in tempfiles.
+    #
+    # @param chunk_limit [Integer] The maximum number of files to process
+    #   at the same time. Most useful when you run on a system where the
+    #   number of open file descriptors is limited. If your number of file
+    #   descriptors is unlimited, you want to set it to a higher number to
+    #   avoid the overhead of multiple runs.
     #
     # @example
-    #   mapper.shuffle do |partition, tempfile|
-    #     # store data e.g. on s3
+    #   mapper.shuffle do |partitions|
+    #     partitions.each do |partition, path|
+    #       # store data e.g. on s3
+    #     end
     #   end
 
-    def shuffle(&block)
-      return enum_for(:shuffle) unless block_given?
+    def shuffle(chunk_limit:)
+      raise(InvalidChunkLimit, "Chunk limit must be >= 2") unless chunk_limit >= 2
 
-      write_chunk if @buffer_size > 0
+      begin
+        write_chunk if @buffer_size > 0
 
-      partitions = {}
+        chunk = k_way_merge(@chunks, chunk_limit: chunk_limit)
+        chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
 
-      chunk = k_way_merge(@chunks)
-      chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
+        partitions = split_chunk(chunk)
 
-      chunk.each do |pair|
-        partition = @partitioner.call(pair[0])
+        yield(partitions.transform_values(&:path))
+      ensure
+        partitions.each_value(&:delete)
 
-        (partitions[partition] ||= Tempfile.new).puts(JSON.generate(pair))
+        @chunks.each(&:delete)
+        @chunks = []
       end
-
-      @chunks.each { |tempfile| tempfile.close(true) }
-      @chunks = []
-
-      partitions.each_value(&:rewind)
-
-      partitions.each do |partition, tempfile|
-        block.call(partition, tempfile)
-      end
-
-      partitions.each_value { |tempfile| tempfile.close(true) }
 
       nil
     end
 
     private
 
+    def split_chunk(chunk)
+      res = {}
+      current_partition = nil
+      file = nil
+
+      chunk.each do |((new_partition, key), value)|
+        if new_partition != current_partition
+          file&.close
+
+          current_partition = new_partition
+          temp_path = TempPath.new
+          res[new_partition] = temp_path
+          file = File.open(temp_path.path, "w+")
+        end
+
+        file.puts(JSON.generate([key, value]))
+      end
+
+      file&.close
+
+      res
+    end
+
     def write_chunk
-      tempfile = Tempfile.new
+      temp_path = TempPath.new
 
       @buffer.sort_by!(&:first)
 
       chunk = @buffer
       chunk = reduce_chunk(chunk, @implementation) if @implementation.respond_to?(:reduce)
 
-      chunk.each do |pair|
-        tempfile.puts JSON.generate(pair)
+      File.open(temp_path.path, "w+") do |file|
+        chunk.each do |pair|
+          file.puts JSON.generate(pair)
+        end
       end
 
-      tempfile.rewind
-
-      @chunks.push(tempfile)
+      @chunks.push(temp_path)
 
       @buffer_size = 0
       @buffer = []

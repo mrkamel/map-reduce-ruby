@@ -13,4 +13,7 @@ require "map_reduce/hash_partitioner"
 require "map_reduce/mapper"
 require "map_reduce/reducer"
 
-module MapReduce; end
+module MapReduce
+  class Error < StandardError; end
+  class InvalidChunkLimit < Error; end
+end

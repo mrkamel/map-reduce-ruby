@@ -2,49 +2,62 @@ class TestMergeable
   include MapReduce::Mergeable
 end
 
-RSpec.describe TestMergeable do
-  describe "#k_way_merge" do
-    it "yields all pairs in sort order of the key" do
-      tempfile1 = Tempfile.new
-      tempfile1.puts(JSON.generate(["key1", 1]))
-      tempfile1.puts(JSON.generate(["key3", 2]))
-      tempfile1.puts(JSON.generate(["key4", 3]))
+module MapReduce
+  RSpec.describe TestMergeable do
+    describe "#k_way_merge" do
+      it "yields all pairs in sort order of the key" do
+        temp_path1 = TempPath.new
+        file1 = File.open(temp_path1.path, "w+")
+        file1.puts(JSON.generate(["key1", 1]))
+        file1.puts(JSON.generate(["key3", 2]))
+        file1.puts(JSON.generate(["key4", 3]))
+        file1.close
 
-      tempfile2 = Tempfile.new
-      tempfile2.puts(JSON.generate(["key2", 1]))
-      tempfile2.puts(JSON.generate(["key5", 2]))
-      tempfile2.puts(JSON.generate(["key6", 3]))
+        temp_path2 = TempPath.new
+        file2 = File.open(temp_path2.path, "w+")
+        file2.puts(JSON.generate(["key2", 1]))
+        file2.puts(JSON.generate(["key5", 2]))
+        file2.puts(JSON.generate(["key6", 3]))
+        file2.close
 
-      expect(described_class.new.send(:k_way_merge, [tempfile1.tap(&:rewind), tempfile2.tap(&:rewind)]).to_a).to eq(
-        [
-          ["key1", 1],
-          ["key2", 1],
-          ["key3", 2],
-          ["key4", 3],
-          ["key5", 2],
-          ["key6", 3]
-        ]
-      )
-    ensure
-      tempfile1&.close(true)
-      tempfile2&.close(true)
-    end
+        temp_path3 = TempPath.new
+        file3 = File.open(temp_path3.path, "w+")
+        file3.puts(JSON.generate(["key3", 1]))
+        file3.puts(JSON.generate(["key7", 2]))
+        file3.puts(JSON.generate(["key8", 3]))
+        file3.close
 
-    it "simply yields all pairs when only one file is given" do
-      tempfile = Tempfile.new
-      tempfile.puts(JSON.generate(["key1", 1]))
-      tempfile.puts(JSON.generate(["key3", 2]))
-      tempfile.puts(JSON.generate(["key4", 3]))
+        expect(described_class.new.send(:k_way_merge, [temp_path1, temp_path2, temp_path3], chunk_limit: 2).to_a).to eq(
+          [
+            ["key1", 1],
+            ["key2", 1],
+            ["key3", 1],
+            ["key3", 2],
+            ["key4", 3],
+            ["key5", 2],
+            ["key6", 3],
+            ["key7", 2],
+            ["key8", 3]
+          ]
+        )
+      end
 
-      expect(described_class.new.send(:k_way_merge, [tempfile.tap(&:rewind)]).to_a).to eq(
-        [
-          ["key1", 1],
-          ["key3", 2],
-          ["key4", 3]
-        ]
-      )
-    ensure
-      tempfile&.close(true)
+      it "simply yields all pairs when only one file is given" do
+        temp_path = TempPath.new
+        file = File.open(temp_path.path, "w+")
+        file.puts(JSON.generate(["key1", 1]))
+        file.puts(JSON.generate(["key3", 2]))
+        file.puts(JSON.generate(["key4", 3]))
+        file.close
+
+        expect(described_class.new.send(:k_way_merge, [temp_path], chunk_limit: 2).to_a).to eq(
+          [
+            ["key1", 1],
+            ["key3", 2],
+            ["key4", 3]
+          ]
+        )
+      end
     end
   end
 end
