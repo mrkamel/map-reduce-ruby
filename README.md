@@ -154,27 +154,26 @@ a rule of thumb, it allocates 10 times more memory. Still, choosing a value for
 worker threads your background queue spawns and how much memory your workers
 need besides map/reduce. Let's say your container/server has 2 gigabytes of
 memory and your background framework spawns 5 threads. Theoretically, you might
-be able to give 300-400 megabytes to Kraps then, but now divide this by 10 and
-specify a `memory_limit` of around `30.megabytes`, better less. The
-`memory_limit` affects how much chunks will be written to disk depending on the
-data size you are processing and how big these chunks are. The smaller the
-value, the more chunks and the more chunks, the more runs Kraps need to merge
-the chunks.  When the memory limit is reached, the buffer is sorted by key and
-fed through your `reduce` implementation already, as this can greatly reduce
-the amount of data already. The result is written to a tempfile. This proceeds
-up until all key-value pairs are yielded. `MapReduce::Mapper#shuffle` then
-reads the first key-value pair of all already sorted chunk tempfiles and adds
-them to a priority queue using a binomial heap, such that with every `pop`
-operation on that heap, we get items sorted by key. When the item returned by
-`pop` e.g.  belongs to the second chunk, then the next key-value pair of the
-second chunk is subsequently read and added to the priority queue, up until no
-more pairs are available. This guarantees that we sort all chunks without fully
-loading them into memory and is called `k-way-merge`. With every `pop`
-operation, your `reduce` implementation is continously called up until the key
-changes between two calls to `pop`. When the key changes, the key is known to
-be fully reduced, such that the key is hashed modulo the number of partitions
-and gets written to the correct partition tempfile (when
-`MapReduce::HashPartitioner` is used).
+be able to give 300-400 megabytes, but now divide this by 10 and specify a
+`memory_limit` of around `30.megabytes`, better less. The `memory_limit`
+affects how much chunks will be written to disk depending on the data size you
+are processing and how big these chunks are. The smaller the value, the more
+chunks and the more chunks, the more runs are needed to merge the chunks. When
+the memory limit is reached, the buffer is sorted by key and fed through your
+`reduce` implementation already, as this can greatly reduce the amount of data
+already. The result is written to a tempfile. This proceeds up until all
+key-value pairs are yielded. `MapReduce::Mapper#shuffle` then reads the first
+key-value pair of all already sorted chunk tempfiles and adds them to a
+priority queue using a binomial heap, such that with every `pop` operation on
+that heap, we get items sorted by key. When the item returned by `pop` e.g.
+belongs to the second chunk, then the next key-value pair of the second chunk
+is subsequently read and added to the priority queue, up until no more pairs
+are available. This guarantees that we sort all chunks without fully loading
+them into memory and is called `k-way-merge`. With every `pop` operation, your
+`reduce` implementation is continously called up until the key changes between
+two calls to `pop`. When the key changes, the key is known to be fully reduced,
+such that the key is hashed modulo the number of partitions and gets written to
+the correct partition tempfile (when `MapReduce::HashPartitioner` is used).
 
 The resulting partition tempfiles need to be stored in some global storage
 system like s3, such that your mapper workers can upload them and the reducer
