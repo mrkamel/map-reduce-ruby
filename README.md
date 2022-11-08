@@ -68,8 +68,8 @@ end
 ```
 
 Please note that `MapReduce::HashPartitioner.new(16)` states that we want to
-split the dataset into 16 partitions (i.e. 0, 1, ... 15). Finally, we need some
-worker code to run the reduce part:
+split the dataset into 16 partitions (i.e. 0, 1, ... 15). Finally, we need
+some worker code to run the reduce part:
 
 ```ruby
 class WordCountReducer
@@ -146,21 +146,35 @@ workings of MapReduce. Of course, feel free to check the code as well.
 
 `MapReduce::Mapper#map` calls your `map` implementation and adds each yielded
 key-value pair to an internal buffer up until the memory limit is reached.
-When the memory limit is reached, the buffer is sorted by key and fed through
-your `reduce` implementation already, as this can greatly reduce the amount of
-data already. The result is written to a tempfile. This proceeds up until all
-key-value pairs are yielded. `MapReduce::Mapper#shuffle` then reads the first
-key-value pair of all already sorted chunk tempfiles and adds them to a
-priority queue using a binomial heap, such that with every `pop` operation on
-that heap, we get items sorted by key. When the item returned by `pop` e.g.
-belongs to the second chunk, then the next key-value pair of the second chunk
-is subsequently read and added to the priority queue, up until no more pairs
-are available. This guarantees that we sort all chunks without fully loading
-them into memory and is called `k-way-merge`. With every `pop` operation, your
-`reduce` implementation is continously called up until the key changes between
-two calls to `pop`. When the key changes, the key is known to be fully reduced,
-such that the key is hashed modulo the number of partitions and gets written to
-the correct partition tempfile (when `MapReduce::HashPartitioner` is used).
+More concretely, it specifies how big the file size of a temporary chunk can
+grow in memory up until it must be written to disk. However, ruby of course
+allocates much more memory for a chunk than the raw file size of the chunk. As
+a rule of thumb, it allocates 10 times more memory. Still, choosing a value for
+`memory_size` depends on the memory size of your container/server, how much
+worker threads your background queue spawns and how much memory your workers
+need besides map/reduce. Let's say your container/server has 2 gigabytes of
+memory and your background framework spawns 5 threads. Theoretically, you might
+be able to give 300-400 megabytes to Kraps then, but now divide this by 10 and
+specify a `memory_limit` of around `30.megabytes`, better less. The
+`memory_limit` affects how much chunks will be written to disk depending on the
+data size you are processing and how big these chunks are. The smaller the
+value, the more chunks and the more chunks, the more runs Kraps need to merge
+the chunks.  When the memory limit is reached, the buffer is sorted by key and
+fed through your `reduce` implementation already, as this can greatly reduce
+the amount of data already. The result is written to a tempfile. This proceeds
+up until all key-value pairs are yielded. `MapReduce::Mapper#shuffle` then
+reads the first key-value pair of all already sorted chunk tempfiles and adds
+them to a priority queue using a binomial heap, such that with every `pop`
+operation on that heap, we get items sorted by key. When the item returned by
+`pop` e.g.  belongs to the second chunk, then the next key-value pair of the
+second chunk is subsequently read and added to the priority queue, up until no
+more pairs are available. This guarantees that we sort all chunks without fully
+loading them into memory and is called `k-way-merge`. With every `pop`
+operation, your `reduce` implementation is continously called up until the key
+changes between two calls to `pop`. When the key changes, the key is known to
+be fully reduced, such that the key is hashed modulo the number of partitions
+and gets written to the correct partition tempfile (when
+`MapReduce::HashPartitioner` is used).
 
 The resulting partition tempfiles need to be stored in some global storage
 system like s3, such that your mapper workers can upload them and the reducer
