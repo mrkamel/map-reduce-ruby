@@ -54,7 +54,7 @@ Next, we need some worker code to run the mapping part:
 ```ruby
 class WordCountMapper
   def perform(job_id, mapper_id, url)
-    mapper = MapReduce::Mapper.new(WordCounter.new, partitioner: MapReduce::HashPartitioner.new(16), memory_limit: 100.megabytes)
+    mapper = MapReduce::Mapper.new(WordCounter.new, partitioner: MapReduce::HashPartitioner.new(16), memory_limit: 10.megabytes)
     mapper.map(url)
 
     mapper.shuffle(chunk_limit: 64) do |partitions|

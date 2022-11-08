@@ -16,9 +16,9 @@ module MapReduce
     #   bytes.
     #
     # @example
-    #  MapReduce::Mapper.new(MyImplementation.new, partitioner: HashPartitioner.new(16), memory_limit: 100.megabytes)
+    #  MapReduce::Mapper.new(MyImplementation.new, partitioner: HashPartitioner.new(16), memory_limit: 16.megabytes)
 
-    def initialize(implementation, partitioner: HashPartitioner.new(32), memory_limit: 100 * 1024 * 1024)
+    def initialize(implementation, partitioner: HashPartitioner.new(32), memory_limit: 16 * 1024 * 1024)
       super()
 
       @implementation = implementation
