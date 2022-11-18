@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    map-reduce-ruby (3.0.0)
+    map-reduce-ruby (3.0.1)
       json
       lazy_priority_queue
 

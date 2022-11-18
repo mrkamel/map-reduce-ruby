@@ -18,8 +18,7 @@ module MapReduce
       super()
 
       @implementation = implementation
-
-      @temp_paths ||= []
+      @temp_paths = []
     end
 
     # Adds a chunk from the mapper-phase to the reducer by registering a
