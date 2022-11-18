@@ -86,7 +86,7 @@ module MapReduce
 
         yield(partitions.transform_values(&:path))
       ensure
-        partitions.each_value(&:delete)
+        partitions&.each_value(&:delete)
 
         @chunks.each(&:delete)
         @chunks = []

@@ -225,5 +225,25 @@ RSpec.describe MapReduce::Mapper do
     it "raises a InvalidChunkLimit error when chunk_limit is less than 2" do
       expect { described_class.new(Object.new).shuffle(chunk_limit: 1, &proc {}) }.to raise_error(MapReduce::InvalidChunkLimit)
     end
+
+    it "raises errors when e.g. the disk is full after cleanup" do
+      implementation = Object.new
+
+      allow(implementation).to receive(:map)
+        .and_yield(["key1"], { "value" => 1 })
+        .and_yield(["key2"], { "value" => 1 })
+        .and_yield(["key3"], { "value" => 1 })
+
+      mapper = described_class.new(implementation)
+      mapper.map("key")
+
+      allow(mapper).to receive(:split_chunk).and_raise("error")
+
+      expect do
+        mapper.shuffle(chunk_limit: 64) do
+          # nothing
+        end
+      end.to raise_error("error")
+    end
   end
 end

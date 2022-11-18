@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## v3.0.1
+
+* Fix cleanup in `MapReduce::Mapper#shuffle`
+
 ## v3.0.0
 
 * [BREAKING] `MapReduce::Mapper#shuffle` now yields a hash of (partition, path)
